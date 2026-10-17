@@ -189,6 +189,87 @@ describe('audio devices and speakers', () => {
   });
 });
 
+interface Screen {
+  id: string;
+  socket: Socket;
+  view: View | null;
+  media: MediaInfo[];
+  cues: string[];
+  ask: <T = undefined>(event: string, payload?: object) => Promise<Ack<T>>;
+}
+
+async function screen(id: string, roomCode: string, householdId: string, audio = true): Promise<Screen> {
+  const socket = io(url, { transports: ['websocket'], forceNew: true });
+  sockets.push(socket);
+  const tv: Screen = {
+    id,
+    socket,
+    view: null,
+    media: [],
+    cues: [],
+    ask: (event, payload = {}) => new Promise((resolve) => socket.emit(event, payload, resolve)),
+  };
+  socket.on('view', (v: View) => (tv.view = v));
+  socket.on('media', (m: MediaInfo) => tv.media.push(m));
+  socket.on('cue', (c: string) => tv.cues.push(c));
+  const r = await tv.ask('joinScreen', { roomCode, householdId, device: { id, audio } });
+  if (!r.ok) throw new Error(r.message);
+  return tv;
+}
+
+describe('TV main screens', () => {
+  it('joins a household, sees the whole game, and has no controls', async () => {
+    const { a1 } = await room();
+    const code = (a1 as unknown as { roomCode: string }).roomCode;
+    const tv = await screen('tv1', code, 'h1');
+    await until(() => tv.view);
+    expect(tv.view!.you).toMatchObject({ screen: true, isHost: false, canGrab: false });
+    expect(tv.view!.players.map((p) => p.name)).toContain('Ann');
+    expect(await tv.ask('grab', { wordId: 'x' })).toMatchObject({ ok: false, code: 'no-session' });
+    expect(await tv.ask('startGame')).toMatchObject({ ok: false });
+  });
+
+  it('refuses a missing room or household', async () => {
+    const { a1 } = await room();
+    const code = (a1 as unknown as { roomCode: string }).roomCode;
+    await expect(screen('tvx', code, 'h9')).rejects.toThrow(/household/);
+    await expect(screen('tvx', 'ZZZZ', 'h1')).rejects.toThrow(/room/i);
+  });
+
+  it('takes over as its household’s speaker, and hands back to the phone when it leaves', async () => {
+    const { a1, a2 } = await room();
+    const code = (a1 as unknown as { roomCode: string }).roomCode;
+    const tv = await screen('tv1', code, 'h1');
+    await until(() => tv.media.length > 0 && !lastMedia(a1)!.playRemote);
+    expect(tv.media[0]!.playRemote).toBe(true);
+    expect(lastMedia(a2)!.playRemote).toBe(false);
+    await until(() => a1.view?.devices.some((d) => d.screen && d.speaker));
+    expect(await a1.ask('setSpeaker', { householdId: 'h1', deviceId: 'a2' })).toMatchObject({ ok: false, code: 'bad-speaker' });
+
+    tv.socket.disconnect();
+    await until(() => lastMedia(a1)!.playRemote);
+    expect(a1.view!.devices.some((d) => d.screen && d.connected)).toBe(false);
+  });
+
+  it('hears other households but never its own singer, and gets the sound cues', async () => {
+    const { a1, a2, b1, c1 } = await room();
+    const code = (a1 as unknown as { roomCode: string }).roomCode;
+    const tvA = await screen('tvA', code, 'h1');
+    const tvB = await screen('tvB', code, 'h2');
+    for (const d of [a1, a2, b1, c1, tvA, tvB]) await d.ask('mediaConnected');
+    await a1.ask('startGame');
+    await until(() => b1.view?.word?.status === 'open');
+    await b1.ask('grab', { wordId: b1.view!.word!.id });
+    await until(() => media.perms.get('tvA')?.canSubscribe);
+    expect(media.perms.get('tvA')).toEqual({ canPublish: false, canSubscribe: true });
+    expect(media.perms.get('tvB')).toEqual({ canPublish: false, canSubscribe: false }); // the singer's own house
+    expect(media.perms.get('a1')!.canSubscribe).toBe(false); // the TV took over from the phone
+    expect(media.perms.get('b1')).toEqual({ canPublish: true, canSubscribe: false });
+    await until(() => tvA.cues.includes('grab'));
+    expect(tvA.view!.word!.status).toBe('singing');
+  });
+});
+
 describe('LiveKitMediaAdapter', () => {
   it('issues a token that carries the room, identity and permissions', async () => {
     const adapter = new LiveKitMediaAdapter(

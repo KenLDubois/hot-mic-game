@@ -16,10 +16,12 @@ export interface RoomDeps {
   onEmpty: (room: Room) => void;
 }
 
-/** One browser tab. A player can have several; only audio-capable ones can be a speaker. */
+/** One browser tab: a player's phone, or a TV main screen (no player). Only audio-capable ones can be a speaker. */
 interface Device {
   id: string;
-  playerId: string;
+  /** Null for a TV main screen. */
+  playerId: string | null;
+  householdId: string;
   audio: boolean;
   /** Order of first appearance, which decides the default speaker. */
   seq: number;
@@ -47,6 +49,9 @@ export class Room {
   private socketDevice = new Map<GameSocket, Device>();
   /** The device each household currently plays remote audio on. */
   private speakers = new Map<string, string>();
+  /** The phone each household keeps as speaker until it goes away; a TV, when there is one, overrides it. */
+  private phoneSpeakers = new Map<string, string>();
+  private screenSockets = new Set<GameSocket>();
   /** The device each player last grabbed or pressed from: the one that sends their voice. */
   private micDevice = new Map<string, string>();
   private deviceSeq = 0;
@@ -108,7 +113,7 @@ export class Room {
     if (!set) this.sockets.set(playerId, (set = new Set()));
     set.add(socket);
     this.cancelDiscard();
-    const d = this.registerDevice(playerId, socket, device ?? { id: socket.id, audio: false });
+    const d = this.registerDevice(playerId, this.game.players[playerId]?.householdId ?? '', socket, device ?? { id: socket.id, audio: false });
     this.dispatch({ type: 'playerConnected', playerId });
     if (d.audio) void this.sendMedia(d);
   }
@@ -133,14 +138,44 @@ export class Room {
     if (this.sockets.size === 0) this.armDiscard();
   }
 
+  /** A TV main screen joins for a household and, once connected, becomes its speaker. */
+  attachScreen(socket: GameSocket, householdId: string, device: { id: string; audio: boolean }): string | null {
+    if (!this.game.households.some((h) => h.id === householdId)) return 'That household does not exist';
+    this.screenSockets.add(socket);
+    const d = this.registerDevice(null, householdId, socket, device);
+    socket.emit('view', this.screenView());
+    this.devicesChanged();
+    if (d.audio) void this.sendMedia(d);
+    return null;
+  }
+
+  detachScreen(socket: GameSocket) {
+    this.screenSockets.delete(socket);
+    const d = this.socketDevice.get(socket);
+    this.socketDevice.delete(socket);
+    if (d) {
+      d.sockets.delete(socket);
+      if (d.sockets.size === 0) {
+        d.mediaUp = false;
+        d.applied = null;
+        d.sentPlayRemote = undefined;
+      }
+    }
+    this.devicesChanged();
+  }
+
+  private screenOf(householdId: string): Device | undefined {
+    return [...this.devices.values()].find((d) => d.playerId === null && d.householdId === householdId && d.audio && d.sockets.size > 0);
+  }
+
   /** Make `deviceId` its household's speaker. Returns an error message if it can't be. */
   setSpeaker(playerId: string, householdId: string, deviceId: string): string | null {
     if (this.game.players[playerId]?.householdId !== householdId) return 'That is not your household';
     const d = this.devices.get(deviceId);
-    const owner = d && this.game.players[d.playerId];
-    if (!d || !owner || owner.householdId !== householdId || !d.audio) return 'That device is not in your household';
+    if (!d || d.householdId !== householdId || !d.audio || d.playerId === null) return 'That device is not in your household';
     if (d.sockets.size === 0) return 'That device is not connected';
-    this.speakers.set(householdId, deviceId);
+    if (this.screenOf(householdId)) return 'The TV plays the sound for your household';
+    this.phoneSpeakers.set(householdId, deviceId);
     this.devicesChanged();
     return null;
   }
@@ -154,15 +189,15 @@ export class Room {
     this.syncMedia();
   }
 
-  private registerDevice(playerId: string, socket: GameSocket, info: { id: string; audio: boolean }): Device {
+  private registerDevice(playerId: string | null, householdId: string, socket: GameSocket, info: { id: string; audio: boolean }): Device {
     let d = this.devices.get(info.id);
-    if (d && d.playerId !== playerId) {
+    if (d && (d.playerId !== playerId || d.householdId !== householdId)) {
       // A device id belongs to one player; a clash means a shared browser profile, so start afresh.
       this.dropDevice(d);
       d = undefined;
     }
     if (!d) {
-      d = { id: info.id, playerId, audio: info.audio, seq: this.deviceSeq++, sockets: new Set(), mediaUp: false, applied: null };
+      d = { id: info.id, playerId, householdId, audio: info.audio, seq: this.deviceSeq++, sockets: new Set(), mediaUp: false, applied: null };
       this.devices.set(d.id, d);
     }
     d.audio = info.audio;
@@ -174,7 +209,7 @@ export class Room {
   private dropDevice(d: Device) {
     for (const socket of d.sockets) this.socketDevice.delete(socket);
     this.devices.delete(d.id);
-    for (const [h, id] of this.speakers) if (id === d.id) this.speakers.delete(h);
+    for (const [h, id] of this.phoneSpeakers) if (id === d.id) this.phoneSpeakers.delete(h);
     for (const [p, id] of this.micDevice) if (id === d.id) this.micDevice.delete(p);
   }
 
@@ -185,29 +220,35 @@ export class Room {
   }
 
   /**
-   * Each household keeps its speaker until that device goes away, then the next connected
-   * audio device (in order of arrival) takes over. A returning device does not take it back.
+   * A household's TV plays the sound when one is connected. Otherwise each household keeps its
+   * phone speaker until that device goes away, then the next connected audio phone (in order of
+   * arrival) takes over. A returning device does not take the role back.
    */
   private resolveSpeakers() {
     if (!this.deps.media.enabled) return;
-    const candidates = new Map<string, Device[]>();
+    const phones = new Map<string, Device[]>();
     for (const d of [...this.devices.values()].sort((a, b) => a.seq - b.seq)) {
+      if (d.playerId === null || !d.audio || d.sockets.size === 0) continue;
       const p = this.game.players[d.playerId];
-      if (!d.audio || d.sockets.size === 0 || !p || p.kicked) continue;
-      const list = candidates.get(p.householdId) ?? [];
+      if (!p || p.kicked) continue;
+      const list = phones.get(d.householdId) ?? [];
       list.push(d);
-      candidates.set(p.householdId, list);
+      phones.set(d.householdId, list);
     }
-    for (const h of [...this.speakers.keys()]) if (!candidates.has(h)) this.speakers.delete(h);
-    for (const [h, list] of candidates) {
-      const cur = this.speakers.get(h);
-      if (!cur || !list.some((d) => d.id === cur)) this.speakers.set(h, list[0]!.id);
+    for (const h of [...this.phoneSpeakers.keys()]) if (!phones.has(h)) this.phoneSpeakers.delete(h);
+    for (const [h, list] of phones) {
+      const cur = this.phoneSpeakers.get(h);
+      if (!cur || !list.some((d) => d.id === cur)) this.phoneSpeakers.set(h, list[0]!.id);
+    }
+    this.speakers = new Map(this.phoneSpeakers);
+    for (const d of this.devices.values()) {
+      const tv = d.playerId === null ? this.screenOf(d.householdId) : undefined;
+      if (tv) this.speakers.set(d.householdId, tv.id);
     }
   }
 
   private isSpeaker(d: Device): boolean {
-    const p = this.game.players[d.playerId];
-    return !!p && this.speakers.get(p.householdId) === d.id;
+    return this.speakers.get(d.householdId) === d.id;
   }
 
   /** Who may send and who may hear, worked out from the game state alone. */
@@ -217,7 +258,7 @@ export class Room {
     const live = !!w && !!a && (w.status === 'singing' || w.status === 'voting');
     if (!live || !a) return { canPublish: false, canSubscribe: false };
     const singerHousehold = this.game.players[a.singerId]?.householdId;
-    const own = this.game.players[d.playerId]?.householdId;
+    const own = d.householdId;
     const sendFrom = this.micDevice.get(a.singerId);
     const singerDevices = [...this.devices.values()].filter((x) => x.playerId === a.singerId && x.audio);
     const sender = singerDevices.find((x) => x.id === sendFrom && x.sockets.size > 0)?.id;
@@ -273,9 +314,19 @@ export class Room {
     if (!this.deps.media.enabled) return [];
     const out: DeviceView[] = [];
     for (const d of [...this.devices.values()].sort((a, b) => a.seq - b.seq)) {
-      const p = this.game.players[d.playerId];
-      if (!d.audio || !p || p.kicked) continue;
-      out.push({ id: d.id, playerId: d.playerId, householdId: p.householdId, connected: d.sockets.size > 0, speaker: this.isSpeaker(d) });
+      if (!d.audio) continue;
+      if (d.playerId !== null) {
+        const p = this.game.players[d.playerId];
+        if (!p || p.kicked) continue;
+      }
+      out.push({
+        id: d.id,
+        playerId: d.playerId,
+        screen: d.playerId === null,
+        householdId: d.householdId,
+        connected: d.sockets.size > 0,
+        speaker: this.isSpeaker(d),
+      });
     }
     return out;
   }
@@ -284,7 +335,15 @@ export class Room {
     this.closed = true;
     if (this.timer) clearTimeout(this.timer);
     if (this.discardTimer) clearTimeout(this.discardTimer);
+    for (const socket of this.screenSockets) socket.emit('error', { code: 'no-room', message: 'That room has ended' });
     void this.deps.media.closeRoom(this.code).catch(() => {});
+  }
+
+  /** What a TV main screen sees: the game as no particular player, with nothing hidden from the room. */
+  screenView(): View {
+    const view = this.viewFor('');
+    view.you.screen = true;
+    return view;
   }
 
   viewFor(playerId: string): View {
@@ -324,8 +383,10 @@ export class Room {
         return;
       }
       case 'cue':
+        for (const socket of this.screenSockets) socket.emit('cue', fx.name);
+        return;
       case 'error':
-        return; // cues are for the TV (Milestone 3); errors go back through the caller's ack
+        return; // errors go back through the caller's ack
     }
   }
 
@@ -334,6 +395,10 @@ export class Room {
       if (set.size === 0) continue;
       const view = this.viewFor(playerId);
       for (const socket of set) socket.emit('view', view);
+    }
+    if (this.screenSockets.size > 0) {
+      const view = this.screenView();
+      for (const socket of this.screenSockets) socket.emit('view', view);
     }
   }
 

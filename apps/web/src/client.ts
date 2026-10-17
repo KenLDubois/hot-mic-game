@@ -1,14 +1,20 @@
 import { useSyncExternalStore } from 'react';
 import { io, type Socket } from 'socket.io-client';
-import type { Ack, ClientMessages, MediaInfo, RoomInfo, SessionInfo, View } from '@hot-mic/shared';
+import type { Ack, ClientMessages, CueName, MediaInfo, RoomInfo, ScreenSession, SessionInfo, View } from '@hot-mic/shared';
 import { AudioSession, type AudioState } from './audio';
 
-const STORAGE_KEY = 'hotmic.session';
+/** /screen is the TV main screen; everything else is a phone. */
+export const IS_SCREEN = location.pathname.startsWith('/screen');
+// A TV browser and a phone browser on one machine must not share a saved seat.
+const STORAGE_KEY = IS_SCREEN ? 'hotmic.screen' : 'hotmic.session';
 
 interface Saved {
   roomCode: string;
+  /** A phone's seat; empty for a TV. */
   token: string;
   name: string;
+  /** The household a TV is attached to. */
+  householdId?: string;
 }
 
 export interface ClientState {
@@ -51,6 +57,7 @@ const save = (s: Saved | null) => {
 class GameClient {
   private socket: Socket;
   private listeners = new Set<() => void>();
+  private cueListeners = new Set<(name: CueName) => void>();
   private saved = load();
   private offset = 0;
   private bestRtt = Infinity;
@@ -72,6 +79,7 @@ class GameClient {
       if (this.saved) void this.rejoin(this.saved);
     });
     this.socket.on('disconnect', () => this.set({ connected: false }));
+    this.socket.on('cue', (name: CueName) => this.cueListeners.forEach((fn) => fn(name)));
     this.socket.on('media', (info: MediaInfo) => void this.audio.connect(info));
     this.audio.onConnected = () => void this.request('mediaConnected', {});
     document.addEventListener('visibilitychange', () => {
@@ -90,7 +98,7 @@ class GameClient {
       }
     });
     this.socket.on('error', (e: { code: string; message: string }) => {
-      if (e.code === 'kicked') this.leave(e.message);
+      if (e.code === 'kicked' || (IS_SCREEN && e.code === 'no-room')) this.leave(e.message);
     });
     setInterval(() => this.ping(), 30_000);
   }
@@ -138,7 +146,27 @@ class GameClient {
     return new Promise((resolve) => this.socket.emit(event, payload, resolve));
   }
 
+  /** Sound cues for the TV main screen. */
+  onCue(fn: (name: CueName) => void) {
+    this.cueListeners.add(fn);
+    return () => void this.cueListeners.delete(fn);
+  }
+
+  /** TV main screen: attach to a household in a room. */
+  async joinScreen(roomCode: string, householdId: string): Promise<string | null> {
+    const r = await this.request<ScreenSession>('joinScreen', { roomCode, householdId, device: this.device });
+    if (!r.ok) return r.message;
+    this.saved = { roomCode: r.data.roomCode, token: '', name: '', householdId };
+    save(this.saved);
+    return null;
+  }
+
   private async rejoin(s: Saved) {
+    if (IS_SCREEN) {
+      const err = await this.joinScreen(s.roomCode, s.householdId ?? '');
+      if (!err) return this.set({ restoring: false });
+      return this.leave('That room has ended');
+    }
     const r = await this.request<SessionInfo>('join', { roomCode: s.roomCode, name: s.name, token: s.token, device: this.device });
     if (r.ok) return this.set({ restoring: false });
     this.leave(r.code === 'kicked' ? r.message : r.code === 'no-room' ? 'That room has ended' : null);

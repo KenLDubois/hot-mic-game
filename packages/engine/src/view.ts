@@ -54,6 +54,7 @@ export function viewFor(s: GameState, playerId: string, now: number, roomCode: s
     players,
     households: s.households,
     you: {
+      screen: false,
       playerId,
       isHost: playerId === s.hostId,
       vote: attempt?.votes[playerId] ?? null,

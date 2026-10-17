@@ -3,7 +3,7 @@ import type { View } from '@hot-mic/shared';
 import { client, useAudio } from './client';
 
 /** Level bars driven by the singer's loudness: the local mic for the singer, the media server's report for everyone else. */
-export function Waveform({ isSinger, active }: { isSinger: boolean; active: boolean }) {
+export function Waveform({ isSinger, active, className = 'waveform', size = [240, 64] }: { isSinger: boolean; active: boolean; className?: string; size?: [number, number] }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const el = canvas.current;
@@ -32,7 +32,7 @@ export function Waveform({ isSinger, active }: { isSinger: boolean; active: bool
     frame = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(frame);
   }, [isSinger, active]);
-  return <canvas ref={canvas} className="waveform" width={240} height={64} aria-hidden />;
+  return <canvas ref={canvas} className={className} width={size[0]} height={size[1]} aria-hidden />;
 }
 
 /** Asks for the microphone and shows a live level meter, so players can check their mic before the game. */
@@ -110,8 +110,10 @@ export function SpeakerPanel({ view }: { view: View }) {
   if (!enabled) return null;
 
   const me = view.players.find((p) => p.id === view.you.playerId);
-  const mine = view.devices.filter((d) => d.householdId === me?.householdId && d.connected);
-  const nameOf = (id: string) => view.players.find((p) => p.id === id)?.name ?? 'Someone';
+  const here = view.devices.filter((d) => d.householdId === me?.householdId && d.connected);
+  const tv = here.find((d) => d.screen);
+  const mine = here.filter((d) => !d.screen);
+  const nameOf = (id: string | null) => view.players.find((p) => p.id === id)?.name ?? 'Someone';
   const label = (d: (typeof mine)[number]) => {
     const same = mine.filter((x) => x.playerId === d.playerId);
     const n = same.length > 1 ? ` (${same.indexOf(d) + 1})` : '';
@@ -128,11 +130,13 @@ export function SpeakerPanel({ view }: { view: View }) {
         </button>
       )}
       <p className="hint left">
-        {thisOne?.speaker
+        {tv
+          ? 'Your TV plays the sound, so no phone does.'
+          : thisOne?.speaker
           ? "This device plays the singers from other houses. You won't hear your own house through the app."
           : 'Another device in your house plays the sound. Only one does, so nothing echoes.'}
       </p>
-      {mine.length > 1 && (
+      {!tv && mine.length > 1 && (
         <fieldset>
           <legend>Plays the sound</legend>
           {mine.map((d) => (
