@@ -8,71 +8,11 @@
  *
  * URL=https://localhost to go through Caddy instead; CHROMIUM=/path/to/chrome if Playwright's own is missing.
  */
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
-const { chromium } = require('playwright');
+import { closeBrowsers, check, createRoom, joinRoom, log, shot, sleep, stats } from './lib.mjs';
 
-const URL = process.env.URL ?? 'http://localhost:3000';
-const SHOTS = process.env.SHOTS;
-const shot = (page, name) => (SHOTS ? page.screenshot({ path: `${SHOTS}/${name}.png` }) : undefined);
-const browser = await chromium.launch({
-  executablePath: process.env.CHROMIUM || undefined,
-  args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--no-sandbox', '--ignore-certificate-errors', '--autoplay-policy=no-user-gesture-required'],
-});
-const log = (...a) => console.log(...a);
-
-async function open(name) {
-  const ctx = await browser.newContext({ permissions: ['microphone'], viewport: { width: 400, height: 800 } });
-  await ctx.addInitScript(() => {
-    window.__pcs = [];
-    const Orig = window.RTCPeerConnection;
-    window.RTCPeerConnection = function (...a) { const pc = new Orig(...a); window.__pcs.push(pc); return pc; };
-    window.RTCPeerConnection.prototype = Orig.prototype;
-  });
-  const page = await ctx.newPage();
-  page.on('pageerror', (e) => log(`[${name}] pageerror`, e.message));
-  page.on('console', (m) => { if (m.type() === 'error') log(`[${name}] console.error`, m.text()); });
-  await page.goto(URL);
-  return page;
-}
-async function stats(page) {
-  return page.evaluate(async () => {
-    const out = { inbound: 0, outbound: 0, energy: 0, pcs: window.__pcs.length };
-    for (const pc of window.__pcs) {
-      (await pc.getStats()).forEach((r) => {
-        if (r.type === 'inbound-rtp' && r.kind === 'audio') { out.inbound += r.bytesReceived ?? 0; out.energy += r.totalAudioEnergy ?? 0; }
-        if (r.type === 'outbound-rtp' && r.kind === 'audio') out.outbound += r.bytesSent ?? 0;
-      });
-    }
-    return out;
-  });
-}
-
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const check = (ok, msg) => { log(ok ? 'PASS' : 'FAIL', msg); if (!ok) process.exitCode = 1; };
-
-const ann = await open('ann');
-await ann.fill('input[placeholder="Ken"]', 'Ann');
-await ann.getByText('Create a room').click();
-await ann.fill('input[placeholder*="place" i]', 'Annes');
-await ann.getByRole('button', { name: 'Create room' }).click();
-await ann.waitForSelector('.room-code');
-const code = (await ann.textContent('.room-code')).trim();
+const { page: ann, code } = await createRoom('Ann', 'Annes');
 log('room', code);
-
-async function join(name, household) {
-  const p = await open(name);
-  await p.fill('input[placeholder="Ken"]', name);
-  await p.fill('.code-input', code);
-  await p.getByRole('button', { name: 'Join room' }).click();
-  await p.waitForSelector('text=Which household');
-  if (household.existing) await p.getByLabel(household.existing).check();
-  else { await p.getByLabel('A new household').check(); await p.fill('input[placeholder="Household name"]', household.name); }
-  await p.getByRole('button', { name: 'Join', exact: true }).click();
-  await p.waitForSelector('.lobby');
-  return p;
-}
+const join = (name, household) => joinRoom(code, name, household);
 const al = await join('Al', { existing: 'Annes' });
 const ben = await join('Ben', { name: 'Bens' });
 
@@ -173,4 +113,4 @@ await sleep(3500);
 await al.close();
 await sleep(1500);
 check((await text(ann)).includes('This device plays the singers'), 'ann takes over when the speaker phone leaves');
-await browser.close();
+await closeBrowsers();

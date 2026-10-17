@@ -82,9 +82,13 @@ export interface MediaInfo {
   playRemote: boolean;
 }
 
+export type CueName = 'grab' | 'boo' | 'point' | 'steal' | 'final';
+
 export interface DeviceView {
   id: string;
-  playerId: string;
+  /** The phone's player; null for a TV main screen. */
+  playerId: string | null;
+  screen: boolean;
   householdId: string;
   connected: boolean;
   /** The one device in its household that plays remote audio. */
@@ -101,6 +105,8 @@ export interface View {
   players: PlayerView[];
   households: HouseholdView[];
   you: {
+    /** True on a TV main screen, which has no player and no controls. */
+    screen: boolean;
     playerId: string;
     isHost: boolean;
     /** This device's own vote on the current attempt. */

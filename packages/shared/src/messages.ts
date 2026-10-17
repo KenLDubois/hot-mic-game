@@ -28,6 +28,9 @@ export const joinSchema = z
     message: 'Pick or create a household',
   });
 
+/** A TV main screen joins a room by code and attaches to a household, whose speaker it becomes. */
+export const joinScreenSchema = z.object({ roomCode, householdId: id, device: deviceSchema.optional() });
+
 export const roomInfoSchema = z.object({ roomCode });
 
 export const setConfigSchema = z.object({
@@ -58,6 +61,7 @@ export const clockPingSchema = z.object({ clientTime: z.number() });
 export const clientMessages = {
   createRoom: createRoomSchema,
   join: joinSchema,
+  joinScreen: joinScreenSchema,
   roomInfo: roomInfoSchema,
   setConfig: setConfigSchema,
   startGame: startGameSchema,
@@ -83,6 +87,12 @@ export interface SessionInfo {
   token: string;
 }
 
+/** Reply to joinScreen. */
+export interface ScreenSession {
+  roomCode: string;
+  householdId: string;
+}
+
 export interface RoomInfo {
   roomCode: string;
   phase: string;
@@ -96,6 +106,8 @@ export type Ack<T = undefined> =
 export interface ServerEvents {
   view: (view: import('./types.js').View) => void;
   media: (m: import('./types.js').MediaInfo) => void;
+  /** A sound cue for the TV main screen; phones never get these. */
+  cue: (name: import('./types.js').CueName) => void;
   clockPong: (m: { clientTime: number; serverTime: number }) => void;
   error: (m: { code: string; message: string }) => void;
 }

@@ -4,7 +4,7 @@ A self-hosted online party game, Pass The Mic meets Kahoot. A word appears, ever
 
 The design doc and the build plan are the source of truth; this README only covers running and developing the code.
 
-**Status: Milestone 2 (built-in audio).** The singer's voice reaches every other household through the app. Without the audio server (see below) the game still runs and can be played over a video call.
+**Status: Milestone 3 (TV main screen).** The singer's voice reaches every other household through the app, and a TV can show the game. Without the audio server (see below) the game still runs and can be played over a video call.
 
 ## Play it
 
@@ -50,6 +50,12 @@ pnpm typecheck
 
 `tools/e2e/audio.mjs` plays two households through the real app in Chromium (with a fake microphone) against a real LiveKit, and checks who sends and who hears. It needs Playwright and a `livekit-server` binary; the header of the file has the commands.
 
+### Show the game on a TV
+
+Open `/screen` in the TV's browser (or use the link in the lobby's "TV" hint, which fills in the room and household), enter the room code, and pick the household the TV is in. The screen shows the word, who is singing, the votes and the scores, and plays the cues. It has no controls. Press OK once so the browser lets it play sound; from then on the TV is its household's speaker and the phones there stay quiet. It is laid out for a 1080p TV.
+
+`tools/e2e/tv.mjs` checks this in a 1920x1080 browser (same setup as the audio check).
+
 ### Fill a room with bots
 
 Test on one phone by letting scripted bots be the other players:
@@ -66,12 +72,12 @@ Behaviors: `normal`, `always-grab`, `never-grab`, `never-vote`, `random-votes`, 
 
 ```
 apps/server/      Socket.IO handling, rooms, timers, devices and speakers, MediaAdapter (LiveKit)
-apps/web/         phone view (Vite + React)
+apps/web/         phone view and TV screen (Vite + React)
 packages/shared/  types, Zod message schemas, default rules
 packages/engine/  pure game logic: step(state, event, now) → { state, effects }
 packs/            word packs (plain JSON); the file name is the pack id
 tools/bots/       scripted bot players
-tools/e2e/        real-browser audio check (Playwright + a local LiveKit)
+tools/e2e/        real-browser audio and TV checks (Playwright + a local LiveKit)
 docker/           compose file and Caddyfile
 ```
 

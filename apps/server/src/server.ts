@@ -10,6 +10,7 @@ import {
   type Ack,
   type ClientMessages,
   type RoomInfo,
+  type ScreenSession,
   type Rules,
   type ServerEvents,
   type SessionInfo,
@@ -33,6 +34,8 @@ interface SocketData {
   roomCode?: string;
   playerId?: string;
   deviceId?: string;
+  /** This socket is a TV main screen, not a player. */
+  screen?: boolean;
 }
 type GameSocket = Socket<Record<string, never>, ServerEvents, Record<string, never>, SocketData>;
 
@@ -165,6 +168,18 @@ export function createGameServer(opts: ServerOptions) {
       ack({ ok: true, data: { roomCode: room.code, playerId: added.playerId, token: added.token } satisfies SessionInfo });
     });
 
+    on('joinScreen', (msg, ack) => {
+      const room = rooms.get(msg.roomCode);
+      if (!room) return ack(fail('no-room', "That room doesn't exist (any more)"));
+      const device = { id: msg.device?.id ?? socket.id, audio: msg.device?.audio ?? false };
+      const error = room.attachScreen(socket as never, msg.householdId, device);
+      if (error) return ack(fail('no-household', error));
+      socket.data.roomCode = room.code;
+      socket.data.deviceId = device.id;
+      socket.data.screen = true;
+      ack({ ok: true, data: { roomCode: room.code, householdId: msg.householdId } satisfies ScreenSession });
+    });
+
     on('roomInfo', (msg, ack) => {
       const room = rooms.get(msg.roomCode);
       if (!room) return ack(fail('no-room', "That room doesn't exist (any more)"));
@@ -205,8 +220,12 @@ export function createGameServer(opts: ServerOptions) {
       const message = room.setSpeaker(playerId, msg.householdId, msg.deviceId);
       return message ? [{ type: 'error', playerId, code: 'bad-speaker', message }] : [];
     });
-    inRoom('mediaConnected', (_msg, room) => {
-      room.mediaConnected(socket);
+    // Phones and TV screens both report this.
+    on('mediaConnected', (_msg, ack) => {
+      const room = socket.data.roomCode ? rooms.get(socket.data.roomCode) : undefined;
+      if (!room) return ack(fail('no-session', 'Join a room first'));
+      room.mediaConnected(socket as never);
+      ack({ ok: true });
     });
     inRoom('hostAction', (msg, room, playerId) =>
       room.dispatch({
@@ -218,7 +237,8 @@ export function createGameServer(opts: ServerOptions) {
     );
 
     socket.on('disconnect', () => {
-      const { roomCode, playerId } = socket.data;
+      const { roomCode, playerId, screen } = socket.data;
+      if (screen && roomCode) return rooms.get(roomCode)?.detachScreen(socket as never);
       if (!roomCode || !playerId) return;
       rooms.get(roomCode)?.detach(playerId, socket as never);
     });

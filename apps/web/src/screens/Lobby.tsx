@@ -64,6 +64,8 @@ export function Lobby({ view }: { view: View }) {
         ))}
       </section>
 
+      <TvHint view={view} />
+
       <section className="sound">
         <h2>Your microphone</h2>
         <MicCheck />
@@ -118,5 +120,36 @@ export function Lobby({ view }: { view: View }) {
         Leave room
       </button>
     </main>
+  );
+}
+
+/** How to put the game on a TV: open /screen there. The link carries this household, so the TV joins itself. */
+function TvHint({ view }: { view: View }) {
+  const [copied, setCopied] = useState(false);
+  const me = view.players.find((p) => p.id === view.you.playerId);
+  const hasTv = view.devices.some((d) => d.screen && d.connected && d.householdId === me?.householdId);
+  const link = `${location.origin}/screen?room=${view.roomCode}&household=${me?.householdId ?? ''}`;
+  if (hasTv) return null;
+  return (
+    <section className="tv-hint-card">
+      <h2>Show it on a TV (optional)</h2>
+      <p className="hint left">
+        Open <strong>{location.host}/screen</strong> in the TV's browser and enter {view.roomCode}. The TV shows the game and plays the sound for your household.
+      </p>
+      <button
+        className="small"
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(link);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          } catch {
+            // Clipboard blocked: the address above works too.
+          }
+        }}
+      >
+        {copied ? 'TV link copied' : 'Copy a link that skips the typing'}
+      </button>
+    </section>
   );
 }

@@ -86,6 +86,11 @@ export class AudioSession {
     void this.room?.startAudio().catch(() => {});
   }
 
+  /** The shared Web Audio context, once a tap has unlocked it. Null while the browser still blocks sound. */
+  runningContext(): AudioContext | null {
+    return this.ctx && this.ctx.state === 'running' ? this.ctx : null;
+  }
+
   /** Ask for the microphone, then let go of it again. Used by the lobby's mic check. */
   async requestMic(): Promise<MediaStream | null> {
     if (!navigator.mediaDevices) {
