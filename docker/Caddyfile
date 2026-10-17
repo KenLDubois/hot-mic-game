@@ -1,0 +1,6 @@
+# Caddy terminates HTTPS (browsers only allow mic access on HTTPS) and forwards
+# everything, including the game socket, to the game server.
+# With DOMAIN unset this serves https://localhost using Caddy's own local CA.
+{$DOMAIN:localhost} {
+	reverse_proxy server:3000
+}

@@ -1,0 +1,21 @@
+{
+  "name": "hot-mic",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,green \"pnpm --filter @hot-mic/server dev\" \"pnpm --filter @hot-mic/web dev\"",
+    "build": "pnpm --filter @hot-mic/web build",
+    "start": "pnpm --filter @hot-mic/server start",
+    "test": "vitest run",
+    "typecheck": "pnpm -r typecheck",
+    "bots": "pnpm --filter @hot-mic/bots start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
