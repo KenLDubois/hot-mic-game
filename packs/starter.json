@@ -1,0 +1,415 @@
+{
+  "schemaVersion": 1,
+  "type": "words",
+  "name": "Starter",
+  "words": [
+    {
+      "text": "fire",
+      "difficulty": "easy"
+    },
+    {
+      "text": "night",
+      "difficulty": "easy"
+    },
+    {
+      "text": "heart",
+      "difficulty": "easy"
+    },
+    {
+      "text": "rain",
+      "difficulty": "easy"
+    },
+    {
+      "text": "love",
+      "difficulty": "easy"
+    },
+    {
+      "text": "time",
+      "difficulty": "easy"
+    },
+    {
+      "text": "light",
+      "difficulty": "easy"
+    },
+    {
+      "text": "dream",
+      "difficulty": "easy"
+    },
+    {
+      "text": "dance",
+      "difficulty": "easy"
+    },
+    {
+      "text": "baby",
+      "difficulty": "easy"
+    },
+    {
+      "text": "sun",
+      "difficulty": "easy"
+    },
+    {
+      "text": "moon",
+      "difficulty": "easy"
+    },
+    {
+      "text": "star",
+      "difficulty": "easy"
+    },
+    {
+      "text": "sky",
+      "difficulty": "easy"
+    },
+    {
+      "text": "road",
+      "difficulty": "easy"
+    },
+    {
+      "text": "home",
+      "difficulty": "easy"
+    },
+    {
+      "text": "eyes",
+      "difficulty": "easy"
+    },
+    {
+      "text": "river",
+      "difficulty": "easy"
+    },
+    {
+      "text": "sea",
+      "difficulty": "easy"
+    },
+    {
+      "text": "wind",
+      "difficulty": "easy"
+    },
+    {
+      "text": "gold",
+      "difficulty": "easy"
+    },
+    {
+      "text": "blue",
+      "difficulty": "easy"
+    },
+    {
+      "text": "red",
+      "difficulty": "easy"
+    },
+    {
+      "text": "black",
+      "difficulty": "easy"
+    },
+    {
+      "text": "white",
+      "difficulty": "easy"
+    },
+    {
+      "text": "money",
+      "difficulty": "easy"
+    },
+    {
+      "text": "world",
+      "difficulty": "easy"
+    },
+    {
+      "text": "life",
+      "difficulty": "easy"
+    },
+    {
+      "text": "soul",
+      "difficulty": "easy"
+    },
+    {
+      "text": "song",
+      "difficulty": "easy"
+    },
+    {
+      "text": "rock",
+      "difficulty": "easy"
+    },
+    {
+      "text": "rose",
+      "difficulty": "easy"
+    },
+    {
+      "text": "tears",
+      "difficulty": "easy"
+    },
+    {
+      "text": "smile",
+      "difficulty": "easy"
+    },
+    {
+      "text": "summer",
+      "difficulty": "easy"
+    },
+    {
+      "text": "girl",
+      "difficulty": "easy"
+    },
+    {
+      "text": "boy",
+      "difficulty": "easy"
+    },
+    {
+      "text": "angel",
+      "difficulty": "easy"
+    },
+    {
+      "text": "heaven",
+      "difficulty": "easy"
+    },
+    {
+      "text": "down",
+      "difficulty": "easy"
+    },
+    {
+      "text": "up",
+      "difficulty": "easy"
+    },
+    {
+      "text": "back",
+      "difficulty": "easy"
+    },
+    {
+      "text": "run",
+      "difficulty": "easy"
+    },
+    {
+      "text": "fly",
+      "difficulty": "easy"
+    },
+    {
+      "text": "fall",
+      "difficulty": "easy"
+    },
+    {
+      "text": "burn",
+      "difficulty": "easy"
+    },
+    {
+      "text": "cry",
+      "difficulty": "easy"
+    },
+    {
+      "text": "kiss",
+      "difficulty": "easy"
+    },
+    {
+      "text": "touch",
+      "difficulty": "easy"
+    },
+    {
+      "text": "hold",
+      "difficulty": "easy"
+    },
+    {
+      "text": "midnight",
+      "difficulty": "medium"
+    },
+    {
+      "text": "lonely",
+      "difficulty": "medium"
+    },
+    {
+      "text": "rhythm",
+      "difficulty": "medium"
+    },
+    {
+      "text": "thunder",
+      "difficulty": "medium"
+    },
+    {
+      "text": "shadow",
+      "difficulty": "medium"
+    },
+    {
+      "text": "diamond",
+      "difficulty": "medium"
+    },
+    {
+      "text": "whisper",
+      "difficulty": "medium"
+    },
+    {
+      "text": "highway",
+      "difficulty": "medium"
+    },
+    {
+      "text": "silver",
+      "difficulty": "medium"
+    },
+    {
+      "text": "paradise",
+      "difficulty": "medium"
+    },
+    {
+      "text": "memory",
+      "difficulty": "medium"
+    },
+    {
+      "text": "fever",
+      "difficulty": "medium"
+    },
+    {
+      "text": "crazy",
+      "difficulty": "medium"
+    },
+    {
+      "text": "mountain",
+      "difficulty": "medium"
+    },
+    {
+      "text": "ocean",
+      "difficulty": "medium"
+    },
+    {
+      "text": "forever",
+      "difficulty": "medium"
+    },
+    {
+      "text": "stranger",
+      "difficulty": "medium"
+    },
+    {
+      "text": "champion",
+      "difficulty": "medium"
+    },
+    {
+      "text": "summertime",
+      "difficulty": "medium"
+    },
+    {
+      "text": "freedom",
+      "difficulty": "medium"
+    },
+    {
+      "text": "electric",
+      "difficulty": "medium"
+    },
+    {
+      "text": "wildfire",
+      "difficulty": "medium"
+    },
+    {
+      "text": "danger",
+      "difficulty": "medium"
+    },
+    {
+      "text": "wonder",
+      "difficulty": "medium"
+    },
+    {
+      "text": "sunshine",
+      "difficulty": "medium"
+    },
+    {
+      "text": "lightning",
+      "difficulty": "medium"
+    },
+    {
+      "text": "cradle",
+      "difficulty": "medium"
+    },
+    {
+      "text": "bullet",
+      "difficulty": "medium"
+    },
+    {
+      "text": "cherry",
+      "difficulty": "medium"
+    },
+    {
+      "text": "honey",
+      "difficulty": "medium"
+    },
+    {
+      "text": "velvet",
+      "difficulty": "medium"
+    },
+    {
+      "text": "jungle",
+      "difficulty": "medium"
+    },
+    {
+      "text": "carry",
+      "difficulty": "medium"
+    },
+    {
+      "text": "broken",
+      "difficulty": "medium"
+    },
+    {
+      "text": "castle",
+      "difficulty": "medium"
+    },
+    {
+      "text": "garden",
+      "difficulty": "medium"
+    },
+    {
+      "text": "window",
+      "difficulty": "medium"
+    },
+    {
+      "text": "mirror",
+      "difficulty": "medium"
+    },
+    {
+      "text": "candle",
+      "difficulty": "medium"
+    },
+    {
+      "text": "umbrella",
+      "difficulty": "hard"
+    },
+    {
+      "text": "submarine",
+      "difficulty": "hard"
+    },
+    {
+      "text": "kaleidoscope",
+      "difficulty": "hard"
+    },
+    {
+      "text": "carousel",
+      "difficulty": "hard"
+    },
+    {
+      "text": "moonlight",
+      "difficulty": "hard"
+    },
+    {
+      "text": "marmalade",
+      "difficulty": "hard"
+    },
+    {
+      "text": "avalanche",
+      "difficulty": "hard"
+    },
+    {
+      "text": "lullaby",
+      "difficulty": "hard"
+    },
+    {
+      "text": "chandelier",
+      "difficulty": "hard"
+    },
+    {
+      "text": "hurricane",
+      "difficulty": "hard"
+    },
+    {
+      "text": "satellite",
+      "difficulty": "hard"
+    },
+    {
+      "text": "cinnamon",
+      "difficulty": "hard"
+    },
+    {
+      "text": "tambourine",
+      "difficulty": "hard"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+# Run from the repo root:  docker compose -f docker/compose.yaml up --build
+# (or just `docker compose up`, which uses the compose.yaml in the repo root).
+services:
+  server:
+    build:
+      context: ..
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+    expose:
+      - '3000'
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - server
+    environment:
+      # Set DOMAIN in a .env file to get a real Let's Encrypt certificate.
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

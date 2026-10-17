@@ -1,0 +1,23 @@
+{
+  "name": "@hot-mic/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@hot-mic/engine": "workspace:*",
+    "@hot-mic/shared": "workspace:*",
+    "sirv": "^3.0.0",
+    "socket.io": "^4.8.1",
+    "tsx": "^4.19.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "socket.io-client": "^4.8.1",
+    "@hot-mic/bots": "workspace:*"
+  }
+}
