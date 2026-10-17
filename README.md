@@ -4,7 +4,7 @@ A self-hosted online party game, Pass The Mic meets Kahoot. A word appears, ever
 
 The design doc and the build plan are the source of truth; this README only covers running and developing the code.
 
-**Status: Milestone 1 (core loop, phones only).** There is no audio yet, so play it over a video call. Built-in audio is Milestone 2.
+**Status: Milestone 2 (built-in audio).** The singer's voice reaches every other household through the app. Without the audio server (see below) the game still runs and can be played over a video call.
 
 ## Play it
 
@@ -20,21 +20,35 @@ Open it on a phone, create a room, and share the code or the invite link. Everyo
 
 Mic access needs HTTPS on a real phone, so for anything beyond localhost use Docker below.
 
+### Audio
+
+Audio goes through [LiveKit](https://livekit.io), a media server. Only the singer sends, only one device per household plays (the household's speaker, which players can change in the lobby or from Sound in the game), and a household never hears its own singer through the app. Each phone asks for the microphone in the lobby and shows a level meter. With no LiveKit configured the game runs without audio.
+
+The game server turns audio on when these are set: `LIVEKIT_URL` (what browsers connect to, e.g. `wss://hotmic.example.com/livekit`), `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, and optionally `LIVEKIT_API_URL` (what the server uses to reach LiveKit, default `LIVEKIT_URL` with `http`). Docker Compose does all of this for you.
+
+For development, run a local LiveKit (`livekit-server --dev`) and start the game with `LIVEKIT_URL=ws://localhost:7880 LIVEKIT_API_KEY=devkey LIVEKIT_API_SECRET=secret pnpm dev`. Mic access works on `http://localhost`, but not from a phone on your network unless you use HTTPS.
+
 ### Docker Compose (HTTPS)
 
 ```sh
 docker compose up --build
 ```
 
-This runs the game server behind Caddy, which handles HTTPS automatically. With nothing set you get `https://localhost` using Caddy's local CA (run `docker compose exec caddy caddy trust` once, or accept the browser warning). For a real certificate point a domain at the machine, open ports 80 and 443, and put `DOMAIN=hotmic.example.com` in a `.env` file (see `.env.example`).
+Copy `.env.example` to `.env` and fill in `LIVEKIT_API_SECRET` (the file says how). This runs the game server and LiveKit behind Caddy, which handles HTTPS automatically and passes audio signalling to LiveKit under `/livekit`. With nothing else set you get `https://localhost` using Caddy's local CA (run `docker compose exec caddy caddy trust` once, or accept the browser warning). For a real certificate point a domain at the machine, open ports 80 and 443, and put `DOMAIN=hotmic.example.com` in a `.env` file (see `.env.example`).
+
+Audio itself travels directly between phones and LiveKit, not through Caddy: forward **7881/tcp** and **7882/udp** on your router to the machine for players outside your house. LiveKit finds the public address with STUN, so the machine needs outbound UDP. Players on the same network as the server may need your router to allow hairpin NAT (connecting to your own public address); if audio works for remote players but not for those at home, that is the usual cause.
 
 ### Develop
 
 ```sh
 pnpm dev          # game server on :3000 + Vite on :5173 (proxied), with reload
-pnpm test         # engine tests, scripted games, server + bots integration
+pnpm test         # engine tests, scripted games, server + bots integration, audio permissions
 pnpm typecheck
 ```
+
+### Check audio in real browsers
+
+`tools/e2e/audio.mjs` plays two households through the real app in Chromium (with a fake microphone) against a real LiveKit, and checks who sends and who hears. It needs Playwright and a `livekit-server` binary; the header of the file has the commands.
 
 ### Fill a room with bots
 
@@ -51,12 +65,13 @@ Behaviors: `normal`, `always-grab`, `never-grab`, `never-vote`, `random-votes`, 
 ## Layout
 
 ```
-apps/server/      Socket.IO handling, rooms, timers, MediaAdapter (no-op until Milestone 2)
+apps/server/      Socket.IO handling, rooms, timers, devices and speakers, MediaAdapter (LiveKit)
 apps/web/         phone view (Vite + React)
 packages/shared/  types, Zod message schemas, default rules
 packages/engine/  pure game logic: step(state, event, now) → { state, effects }
 packs/            word packs (plain JSON); the file name is the pack id
 tools/bots/       scripted bot players
+tools/e2e/        real-browser audio check (Playwright + a local LiveKit)
 docker/           compose file and Caddyfile
 ```
 

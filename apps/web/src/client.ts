@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { io, type Socket } from 'socket.io-client';
-import type { Ack, ClientMessages, RoomInfo, SessionInfo, View } from '@hot-mic/shared';
+import type { Ack, ClientMessages, MediaInfo, RoomInfo, SessionInfo, View } from '@hot-mic/shared';
+import { AudioSession, type AudioState } from './audio';
 
 const STORAGE_KEY = 'hotmic.session';
 
@@ -18,6 +19,17 @@ export interface ClientState {
   /** A message to show on the home screen (kicked, room gone). */
   notice: string | null;
 }
+
+/** Stable for this tab across reloads, so a reload keeps its speaker role. */
+const deviceId = (): string => {
+  try {
+    let id = sessionStorage.getItem('hotmic.device');
+    if (!id) sessionStorage.setItem('hotmic.device', (id = crypto.randomUUID()));
+    return id;
+  } catch {
+    return crypto.randomUUID();
+  }
+};
 
 const load = (): Saved | null => {
   try {
@@ -42,6 +54,9 @@ class GameClient {
   private saved = load();
   private offset = 0;
   private bestRtt = Infinity;
+  readonly deviceId = deviceId();
+  readonly audio = new AudioSession();
+  private wakeLock: WakeLockSentinel | null = null;
   state: ClientState = {
     connected: false,
     restoring: !!this.saved,
@@ -57,7 +72,15 @@ class GameClient {
       if (this.saved) void this.rejoin(this.saved);
     });
     this.socket.on('disconnect', () => this.set({ connected: false }));
-    this.socket.on('view', (view: View) => this.set({ view, notice: null }));
+    this.socket.on('media', (info: MediaInfo) => void this.audio.connect(info));
+    this.audio.onConnected = () => void this.request('mediaConnected', {});
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && this.state.view) void this.keepAwake();
+    });
+    this.socket.on('view', (view: View) => {
+      if (!this.state.view) void this.keepAwake();
+      this.set({ view, notice: null });
+    });
     this.socket.on('clockPong', (m: { clientTime: number; serverTime: number }) => {
       const rtt = Date.now() - m.clientTime;
       // The sample with the shortest round trip is the most trustworthy one.
@@ -70,6 +93,25 @@ class GameClient {
       if (e.code === 'kicked') this.leave(e.message);
     });
     setInterval(() => this.ping(), 30_000);
+  }
+
+  private get device() {
+    return { id: this.deviceId, audio: true };
+  }
+
+  /** Keep the screen on while in a room, so a phone acting as the speaker doesn't fall asleep. */
+  private async keepAwake() {
+    try {
+      if (this.wakeLock && !this.wakeLock.released) return;
+      this.wakeLock = (await navigator.wakeLock?.request('screen')) ?? null;
+    } catch {
+      // Not supported, or the battery saver said no. The game still works.
+    }
+  }
+
+  /** Call from a tap (such as Join): browsers allow sound only after the user has interacted. */
+  unlockAudio() {
+    this.audio.unlock();
   }
 
   private ping() {
@@ -97,13 +139,13 @@ class GameClient {
   }
 
   private async rejoin(s: Saved) {
-    const r = await this.request<SessionInfo>('join', { roomCode: s.roomCode, name: s.name, token: s.token });
+    const r = await this.request<SessionInfo>('join', { roomCode: s.roomCode, name: s.name, token: s.token, device: this.device });
     if (r.ok) return this.set({ restoring: false });
     this.leave(r.code === 'kicked' ? r.message : r.code === 'no-room' ? 'That room has ended' : null);
   }
 
   async createRoom(name: string, householdName: string): Promise<string | null> {
-    const r = await this.request<SessionInfo>('createRoom', { name, householdName });
+    const r = await this.request<SessionInfo>('createRoom', { name, householdName, device: this.device });
     if (!r.ok) return r.message;
     this.saved = { roomCode: r.data.roomCode, token: r.data.token, name };
     save(this.saved);
@@ -115,7 +157,7 @@ class GameClient {
     name: string,
     household: { householdId: string } | { householdName: string },
   ): Promise<string | null> {
-    const r = await this.request<SessionInfo>('join', { roomCode, name, ...household });
+    const r = await this.request<SessionInfo>('join', { roomCode, name, ...household, device: this.device });
     if (!r.ok) return r.message;
     this.saved = { roomCode: r.data.roomCode, token: r.data.token, name };
     save(this.saved);
@@ -136,12 +178,19 @@ class GameClient {
     this.saved = null;
     save(null);
     this.set({ view: null, restoring: false, notice });
+    void this.audio.disconnect();
+    void this.wakeLock?.release().catch(() => {});
+    this.wakeLock = null;
     // Reconnect so the server sees us as gone from the old room.
     this.socket.disconnect().connect();
   }
 }
 
 export const client = new GameClient();
+
+export function useAudio(): AudioState {
+  return useSyncExternalStore(client.audio.subscribe, client.audio.getState);
+}
 
 export function useClient(): ClientState {
   return useSyncExternalStore(client.subscribe, client.getState);

@@ -32,6 +32,7 @@ export interface ServerOptions {
 interface SocketData {
   roomCode?: string;
   playerId?: string;
+  deviceId?: string;
 }
 type GameSocket = Socket<Record<string, never>, ServerEvents, Record<string, never>, SocketData>;
 
@@ -86,10 +87,11 @@ export function createGameServer(opts: ServerOptions) {
   const firstError = (fx: Effect[], playerId: string) =>
     fx.find((f): f is Effect & { type: 'error' } => f.type === 'error' && f.playerId === playerId);
 
-  function bind(socket: GameSocket, room: Room, playerId: string) {
+  function bind(socket: GameSocket, room: Room, playerId: string, device?: { id: string; audio: boolean }) {
     socket.data.roomCode = room.code;
     socket.data.playerId = playerId;
-    room.attach(playerId, socket);
+    socket.data.deviceId = device?.id ?? socket.id;
+    room.attach(playerId, socket, device);
   }
 
   io.on('connection', (socket: GameSocket) => {
@@ -133,7 +135,7 @@ export function createGameServer(opts: ServerOptions) {
         room.close();
         return ack(fail(added.error.code, added.error.message));
       }
-      bind(socket, room, added.playerId);
+      bind(socket, room, added.playerId, msg.device);
       const data: SessionInfo = { roomCode: room.code, playerId: added.playerId, token: added.token };
       ack({ ok: true, data });
     });
@@ -147,7 +149,7 @@ export function createGameServer(opts: ServerOptions) {
         const player = playerId ? room.game.players[playerId] : undefined;
         if (playerId && player) {
           if (player.kicked) return ack(fail('kicked', 'The host removed you from the room'));
-          bind(socket, room, playerId);
+          bind(socket, room, playerId, msg.device);
           return ack({ ok: true, data: { roomCode: room.code, playerId, token: msg.token } satisfies SessionInfo });
         }
         // An unknown token falls through to a fresh join if they picked a household.
@@ -159,7 +161,7 @@ export function createGameServer(opts: ServerOptions) {
       const household = msg.householdId ? { id: msg.householdId } : { name: msg.householdName! };
       const added = room.addPlayer(msg.name, household);
       if ('error' in added) return ack(fail(added.error.code, added.error.message));
-      bind(socket, room, added.playerId);
+      bind(socket, room, added.playerId, msg.device);
       ack({ ok: true, data: { roomCode: room.code, playerId: added.playerId, token: added.token } satisfies SessionInfo });
     });
 
@@ -188,16 +190,23 @@ export function createGameServer(opts: ServerOptions) {
     });
 
     inRoom('grab', (msg, room, playerId) => {
-      room.dispatch({ type: 'grab', playerId, wordId: msg.wordId });
+      room.dispatch({ type: 'grab', playerId, wordId: msg.wordId }, socket.data.deviceId);
     });
     inRoom('micPress', (msg, room, playerId) => {
-      room.dispatch({ type: 'micPress', playerId, attemptId: msg.attemptId });
+      room.dispatch({ type: 'micPress', playerId, attemptId: msg.attemptId }, socket.data.deviceId);
     });
     inRoom('micRelease', (msg, room, playerId) => {
       room.dispatch({ type: 'micRelease', playerId, attemptId: msg.attemptId });
     });
     inRoom('vote', (msg, room, playerId) => {
       room.dispatch({ type: 'vote', playerId, attemptId: msg.attemptId, vote: msg.vote });
+    });
+    inRoom('setSpeaker', (msg, room, playerId) => {
+      const message = room.setSpeaker(playerId, msg.householdId, msg.deviceId);
+      return message ? [{ type: 'error', playerId, code: 'bad-speaker', message }] : [];
+    });
+    inRoom('mediaConnected', (_msg, room) => {
+      room.mediaConnected(socket);
     });
     inRoom('hostAction', (msg, room, playerId) =>
       room.dispatch({

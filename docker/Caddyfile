@@ -1,6 +1,10 @@
 # Caddy terminates HTTPS (browsers only allow mic access on HTTPS) and forwards
-# everything, including the game socket, to the game server.
+# everything, including the game socket, to the game server. The audio
+# connection to LiveKit goes through the same address under /livekit.
 # With DOMAIN unset this serves https://localhost using Caddy's own local CA.
 {$DOMAIN:localhost} {
+	handle_path /livekit/* {
+		reverse_proxy livekit:7880
+	}
 	reverse_proxy server:3000
 }

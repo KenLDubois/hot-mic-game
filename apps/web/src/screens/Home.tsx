@@ -30,6 +30,7 @@ export function Home({ notice }: { notice: string | null }) {
   };
 
   async function run(fn: () => Promise<string | null>) {
+    client.unlockAudio(); // browsers allow sound only after a tap, and this is that tap
     setBusy(true);
     setError(null);
     const err = await fn();

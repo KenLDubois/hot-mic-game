@@ -11,13 +11,14 @@
   "dependencies": {
     "@hot-mic/engine": "workspace:*",
     "@hot-mic/shared": "workspace:*",
+    "livekit-server-sdk": "^2.19.1",
     "sirv": "^3.0.0",
     "socket.io": "^4.8.1",
     "tsx": "^4.19.2"
   },
   "devDependencies": {
+    "@hot-mic/bots": "workspace:*",
     "@types/node": "^22.10.2",
-    "socket.io-client": "^4.8.1",
-    "@hot-mic/bots": "workspace:*"
+    "socket.io-client": "^4.8.1"
   }
 }

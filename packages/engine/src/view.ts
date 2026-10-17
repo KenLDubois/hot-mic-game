@@ -61,6 +61,8 @@ export function viewFor(s: GameState, playerId: string, now: number, roomCode: s
     },
     wordNumber: w ? w.index + 1 : 0,
     totalWords: s.words.length,
+    // The server fills these in; devices and media are not game rules.
+    devices: [],
     word,
   };
 }

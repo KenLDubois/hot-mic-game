@@ -121,3 +121,10 @@ section { background: var(--panel); border-radius: 16px; padding: 16px; display:
 .scoreboard .score { font-weight: 800; }
 .scoreboard.big li { font-size: 1.2rem; padding: 12px 14px; }
 .host-controls { padding: 8px 12px; }
+
+.meter { height: 14px; background: var(--panel-2); border-radius: 7px; overflow: hidden; }
+.meter > div { height: 100%; background: var(--good); transition: width 0.06s linear; }
+.mic-check { display: flex; flex-direction: column; gap: 8px; }
+.speaker-panel { display: flex; flex-direction: column; gap: 8px; }
+.hint.left { text-align: left; }
+.waveform { width: 240px; height: 64px; color: var(--accent); }
