@@ -1,0 +1,12 @@
+# How the home lab runs Hot Mic: the game server on its own, published on the
+# port the lab assigns it (APP_PORT). Browsers only allow the microphone over
+# HTTPS; in the lab that comes from the reverse proxy in front of this port,
+# so the Caddy setup in docker/compose.yaml isn't used there.
+services:
+  server:
+    build: .
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+    ports:
+      - '${APP_PORT:-3000}:3000'
