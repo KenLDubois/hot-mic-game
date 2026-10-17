@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { LIMITS, type View } from '@hot-mic/shared';
 import { client } from '../client';
 import { PlayerChip } from '../components';
+import { MicCheck, SpeakerPanel } from '../sound';
 
 export function Lobby({ view }: { view: View }) {
   const [copied, setCopied] = useState(false);
@@ -61,6 +62,12 @@ export function Lobby({ view }: { view: View }) {
             ))}
           </div>
         ))}
+      </section>
+
+      <section className="sound">
+        <h2>Your microphone</h2>
+        <MicCheck />
+        <SpeakerPanel view={view} />
       </section>
 
       {isHost ? (

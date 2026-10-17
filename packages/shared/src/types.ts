@@ -73,6 +73,24 @@ export interface PackInfo {
   wordCount: number;
 }
 
+/** What a device needs to join the room's audio. */
+export interface MediaInfo {
+  /** LiveKit URL the browser connects to. */
+  url: string;
+  token: string;
+  /** This device is its household's speaker: it plays remote singers. */
+  playRemote: boolean;
+}
+
+export interface DeviceView {
+  id: string;
+  playerId: string;
+  householdId: string;
+  connected: boolean;
+  /** The one device in its household that plays remote audio. */
+  speaker: boolean;
+}
+
 export interface View {
   version: number;
   serverTime: number;
@@ -92,6 +110,8 @@ export interface View {
   wordNumber: number;
   totalWords: number;
   word: WordView | null;
+  /** Devices that can play audio, filled in by the server. */
+  devices: DeviceView[];
   /** Lobby only, filled in by the server. */
   packs?: PackInfo[];
   /** Lobby only, filled in by the server: why Start is blocked, if it is. */

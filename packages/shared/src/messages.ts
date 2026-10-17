@@ -10,7 +10,10 @@ const roomCode = z
 const id = z.string().min(1).max(64);
 const token = z.string().min(8).max(128);
 
-export const createRoomSchema = z.object({ name, householdName: name });
+/** The browser tab sending a message. Bots omit it, so they never become a speaker. */
+export const deviceSchema = z.object({ id, audio: z.boolean().default(false) });
+
+export const createRoomSchema = z.object({ name, householdName: name, device: deviceSchema.optional() });
 
 export const joinSchema = z
   .object({
@@ -19,6 +22,7 @@ export const joinSchema = z
     householdId: id.optional(),
     householdName: name.optional(),
     token: token.optional(),
+    device: deviceSchema.optional(),
   })
   .refine((m) => m.token || m.householdId || m.householdName, {
     message: 'Pick or create a household',
@@ -44,6 +48,10 @@ export const hostActionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('kick'), playerId: id }),
 ]);
 
+export const setSpeakerSchema = z.object({ householdId: id, deviceId: id });
+/** This device has connected to the media server; send it its current permissions. */
+export const mediaConnectedSchema = z.object({}).strict();
+
 export const clockPingSchema = z.object({ clientTime: z.number() });
 
 /** Every client-to-server message, by Socket.IO event name. */
@@ -58,6 +66,8 @@ export const clientMessages = {
   micRelease: micSchema,
   vote: voteSchema,
   hostAction: hostActionSchema,
+  setSpeaker: setSpeakerSchema,
+  mediaConnected: mediaConnectedSchema,
   clockPing: clockPingSchema,
 } as const;
 
@@ -85,6 +95,7 @@ export type Ack<T = undefined> =
 
 export interface ServerEvents {
   view: (view: import('./types.js').View) => void;
+  media: (m: import('./types.js').MediaInfo) => void;
   clockPong: (m: { clientTime: number; serverTime: number }) => void;
   error: (m: { code: string; message: string }) => void;
 }

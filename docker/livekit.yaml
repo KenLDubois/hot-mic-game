@@ -1,0 +1,21 @@
+# LiveKit media server. Compose passes the API key and secret in LIVEKIT_KEYS.
+port: 7880
+rtc:
+  tcp_port: 7881
+  udp_port: 7882
+  # Players on other networks need our public address. LiveKit asks a STUN
+  # server for it, so this host needs outbound UDP.
+  use_external_ip: true
+# Reports how loud each singer is, for the waveform on other screens. Faster and
+# more sensitive than the defaults, which are tuned for spotting who is talking.
+audio:
+  active_level: 45
+  min_percentile: 20
+  update_interval: 100
+  smooth_intervals: 1
+# Players whose network blocks UDP fall back to TCP on port 7881. For networks
+# that block that too, LiveKit has a built-in TURN server: see
+# https://docs.livekit.io/home/self-hosting/deployment/ (it needs a domain and
+# certificates, so it is not on by default).
+logging:
+  level: info

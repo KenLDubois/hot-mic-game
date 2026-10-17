@@ -1,18 +1,42 @@
 import { useEffect, useRef, useState } from 'react';
 import type { PlayerView, View, Vote, WordView } from '@hot-mic/shared';
-import { client } from '../client';
+import { client, useAudio } from '../client';
+import { SpeakerPanel, Waveform } from '../sound';
 import { Countdown, TimerBar, useNow } from '../components';
 
 export function Game({ view }: { view: View }) {
   const players = [...view.players].filter((p) => !p.kicked || p.score > 0);
   const byId = new Map(view.players.map((p) => [p.id, p]));
+  const [soundOpen, setSoundOpen] = useState(false);
+  const audio = useAudio();
+  const me = view.you.playerId;
+  const singing = view.word?.status === 'singing' && view.word.singerId === me;
+  const held = singing && !!view.word?.held;
+
+  // The mic is captured and published while this player is singing, and live only while held.
+  useEffect(() => {
+    client.audio.setSinging(singing, held);
+  }, [singing, held, audio.connected]);
+  useEffect(() => () => client.audio.setSinging(false, false), []);
 
   return (
     <main className="game">
       <header className="topbar">
         <span>{view.phase === 'final' ? 'Game over' : `Word ${view.wordNumber} of ${view.totalWords}`}</span>
-        <span className="muted">Room {view.roomCode}</span>
+        <span className="muted">
+          {audio.enabled && (
+            <button className="link" onClick={() => setSoundOpen(!soundOpen)}>
+              {audio.playRemote ? '🔊' : '🔈'} Sound
+            </button>
+          )}{' '}
+          Room {view.roomCode}
+        </span>
       </header>
+      {soundOpen && (
+        <section>
+          <SpeakerPanel view={view} />
+        </section>
+      )}
 
       {view.phase === 'final' ? (
         <Final view={view} />
@@ -55,18 +79,24 @@ function WordScreen({ view, word, byId }: { view: View; word: WordView; byId: Ma
   const iSing = word.singerId === me;
   const name = (id: string) => byId.get(id)?.name ?? 'Someone';
 
-  switch (word.status) {
-    case 'open':
-      return (
-        <section className="stage">
-          {word.isSteal && <div className="steal-tag">Steal! The mic is open</div>}
-          <div className="word">{word.text}</div>
-          <TimerBar deadline={word.deadline} label="Time to grab" />
-          <MicButton view={view} word={word} />
-          <GrabHint view={view} word={word} />
-        </section>
-      );
+  // The grab and the song share one layout so the mic button stays mounted when the grab is
+  // confirmed. Remounting it would drop the finger's pointer capture and release the mic.
+  if (word.status === 'open' || (word.status === 'singing' && iSing)) {
+    const open = word.status === 'open';
+    return (
+      <section className="stage">
+        {open && word.isSteal ? <div className="steal-tag">Steal! The mic is open</div> : null}
+        <div className={open ? 'word' : 'word small'}>{word.text}</div>
+        {open ? null : <div className="you-have">You have the mic</div>}
+        {open ? null : <Waveform isSinger active={word.held} />}
+        <TimerBar deadline={open ? word.deadline : word.capDeadline} label={open ? 'Time to grab' : 'Song time left'} />
+        <MicButton view={view} word={word} />
+        {open ? <GrabHint view={view} word={word} /> : <VoteCount word={word} />}
+      </section>
+    );
+  }
 
+  switch (word.status) {
     case 'singing':
     case 'voting':
       return (
@@ -74,19 +104,9 @@ function WordScreen({ view, word, byId }: { view: View; word: WordView; byId: Ma
           <div className="word small">{word.text}</div>
           {iSing ? (
             <>
-              {word.status === 'singing' ? (
-                <>
-                  <div className="you-have">You have the mic</div>
-                  <MicButton view={view} word={word} />
-                  <TimerBar deadline={word.capDeadline} label="Song time left" />
-                </>
-              ) : (
-                <>
-                  <div className="you-have">Time's up!</div>
-                  <p className="hint">Waiting for the votes…</p>
-                  <TimerBar deadline={word.deadline} label="Voting time left" />
-                </>
-              )}
+              <div className="you-have">Time's up!</div>
+              <p className="hint">Waiting for the votes…</p>
+              <TimerBar deadline={word.deadline} label="Voting time left" />
               <VoteCount word={word} />
             </>
           ) : (
@@ -94,6 +114,7 @@ function WordScreen({ view, word, byId }: { view: View; word: WordView; byId: Ma
               <div className="singing-now">
                 {singer?.name ?? 'Someone'} {word.status === 'singing' ? 'is singing' : 'finished'}
               </div>
+              {word.status === 'singing' && <Waveform isSinger={false} active />}
               <VoteButtons word={word} mine={view.you.vote} />
               <VoteCount word={word} />
               {word.status === 'voting' && <TimerBar deadline={word.deadline} label="Voting time left" />}
@@ -160,6 +181,13 @@ function WordScreen({ view, word, byId }: { view: View; word: WordView; byId: Ma
 
 function GrabHint({ view, word }: { view: View; word: WordView }) {
   const me = view.you.playerId;
+  const { enabled: audioOn, mic } = useAudio();
+  if (view.you.canGrab && audioOn && mic === 'denied') {
+    return <p className="hint">Your microphone is blocked, so you can't grab. Allow it for this site in your browser settings, then reload. You can still vote.</p>;
+  }
+  if (view.you.canGrab && audioOn && mic === 'unavailable') {
+    return <p className="hint">No microphone found on this device, so you can't grab. You can still vote.</p>;
+  }
   if (view.you.canGrab) return <p className="hint">Press and hold to grab the mic, and keep holding while you sing.</p>;
   if (word.lockedOut.includes(me)) return <p className="hint">You were booed on this word, so you're locked out.</p>;
   return <p className="hint">You joined mid-word. You can grab from the next one.</p>;
@@ -173,8 +201,11 @@ function MicButton({ view, word }: { view: View; word: WordView }) {
   const me = view.you.playerId;
   const holding = useRef(false);
   const [grabbing, setGrabbing] = useState(false);
+  const { enabled: audioOn, mic } = useAudio();
   const iSing = word.status === 'singing' && word.singerId === me;
-  const canPress = iSing || (word.status === 'open' && view.you.canGrab);
+  // With built-in audio, a blocked microphone means this player can't sing, so they can't grab.
+  const micBlocked = audioOn && (mic === 'denied' || mic === 'unavailable');
+  const canPress = iSing || (word.status === 'open' && view.you.canGrab && !micBlocked);
   const attemptId = word.attemptId;
 
   // Keep the server's idea of "holding" in step with the finger. This covers a release before
@@ -207,7 +238,12 @@ function MicButton({ view, word }: { view: View; word: WordView }) {
   };
 
   const grace = iSing && !word.held ? word.graceDeadline : null;
-  const label = iSing ? (word.held ? 'Singing…' : 'Hold to keep going') : grabbing ? 'Grabbing…' : canPress ? 'Hold to grab' : 'Locked';
+  const label = iSing
+    ? word.held ? 'Singing…' : 'Hold to keep going'
+    : grabbing ? 'Grabbing…'
+    : canPress ? 'Hold to grab'
+    : micBlocked && view.you.canGrab ? 'Mic blocked'
+    : 'Locked';
 
   return (
     <div className="mic-wrap">

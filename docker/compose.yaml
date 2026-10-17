@@ -1,20 +1,44 @@
 # Run from the repo root:  docker compose -f docker/compose.yaml up --build
 # (or just `docker compose up`, which uses the compose.yaml in the repo root).
+# Set LIVEKIT_API_KEY and LIVEKIT_API_SECRET in a .env file first (see .env.example).
 services:
   server:
     build:
       context: ..
     restart: unless-stopped
+    depends_on:
+      - livekit
     environment:
       PORT: 3000
+      # Browsers reach LiveKit through Caddy; the game server talks to it directly.
+      LIVEKIT_URL: wss://${DOMAIN:-localhost}/livekit
+      LIVEKIT_API_URL: http://livekit:7880
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:?Set LIVEKIT_API_KEY in .env, see .env.example}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:?Set LIVEKIT_API_SECRET in .env, see .env.example}
     expose:
       - '3000'
+
+  livekit:
+    image: livekit/livekit-server:v1.9.11
+    restart: unless-stopped
+    command: --config /etc/livekit.yaml
+    environment:
+      LIVEKIT_KEYS: '${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}'
+    ports:
+      # Audio itself. Forward these two on your router for players outside your house.
+      - '7881:7881'
+      - '7882:7882/udp'
+    expose:
+      - '7880'
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
 
   caddy:
     image: caddy:2
     restart: unless-stopped
     depends_on:
       - server
+      - livekit
     environment:
       # Set DOMAIN in a .env file to get a real Let's Encrypt certificate.
       DOMAIN: ${DOMAIN:-localhost}
