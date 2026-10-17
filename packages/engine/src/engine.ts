@@ -30,6 +30,8 @@ export function createGame(rules: Partial<Rules> = {}): GameState {
     words: [],
     wordIndex: 0,
     word: null,
+    roundIndex: 0,
+    intermission: null,
     counters: { household: 0, attempt: 0 },
   };
 }
@@ -59,6 +61,8 @@ export function nextDeadline(s: GameState): number | null {
     if (w.status === 'singing' && w.attempt) times.push(singingEnd(w.attempt));
     else if (w.deadline !== null) times.push(w.deadline);
   }
+  // Otherwise the intermission waits on players; only the minimum time is a deadline.
+  if (s.phase === 'intermission' && s.intermission && everyoneReady(s)) times.push(s.intermission.minUntil);
   return times.length ? Math.min(...times) : null;
 }
 
@@ -85,6 +89,11 @@ export function eligibleVoters(s: GameState, w: WordState): string[] {
 
 function someoneCanGrab(s: GameState, w: WordState): boolean {
   return s.playerOrder.some((id) => canGrab(s, w, id));
+}
+
+function everyoneReady(s: GameState): boolean {
+  const here = activePlayers(s).filter((p) => p.connected);
+  return here.length > 0 && here.every((p) => s.intermission?.ready.includes(p.id));
 }
 
 function activePlayers(s: GameState) {
@@ -169,6 +178,12 @@ function handle(s: GameState, e: GameEvent, now: number, fx: Effect[]) {
       a.votes[e.playerId] = e.vote;
       return;
     }
+    case 'ready': {
+      const p = s.players[e.playerId];
+      if (s.phase !== 'intermission' || !s.intermission || !p || p.kicked) return;
+      if (!s.intermission.ready.includes(p.id)) s.intermission.ready.push(p.id);
+      return;
+    }
     case 'hostAction':
       return onHostAction(s, e, now, fx);
     case 'tick':
@@ -243,6 +258,12 @@ function onSetConfig(
 ) {
   if (e.playerId !== s.hostId) return reject(fx, e.playerId, 'not-host', 'Only the host can do that');
   if (s.phase !== 'lobby') return reject(fx, e.playerId, 'not-lobby', 'The game has already started');
+  if (e.rounds !== undefined) {
+    if (!Number.isInteger(e.rounds) || e.rounds < 1 || e.rounds > LIMITS.maxRounds) {
+      return reject(fx, e.playerId, 'bad-config', `Pick 1 to ${LIMITS.maxRounds} rounds`);
+    }
+    s.config.rounds = e.rounds;
+  }
   if (e.wordsPerRound !== undefined) {
     if (
       !Number.isInteger(e.wordsPerRound) ||
@@ -279,6 +300,8 @@ function onStart(
   }
   s.words = e.words.slice(0, total);
   s.wordIndex = 0;
+  s.roundIndex = 0;
+  s.intermission = null;
   s.phase = 'word';
   openWord(s, 0, now);
 }
@@ -301,6 +324,7 @@ function onHostAction(
       return;
     }
     case 'forceNext': {
+      if (s.phase === 'intermission') return startRound(s, now);
       if (s.phase !== 'word' || !w) return;
       if (w.status === 'result' || w.status === 'steal' || w.status === 'done') w.deadline = now;
       return;
@@ -311,6 +335,8 @@ function onHostAction(
       s.word = null;
       s.words = [];
       s.wordIndex = 0;
+      s.roundIndex = 0;
+      s.intermission = null;
       for (const p of Object.values(s.players)) {
         p.score = 0;
         p.stats = emptyStats();
@@ -332,6 +358,14 @@ function onHostAction(
 }
 
 // ----------------------------------------------------------- word machine
+
+/** The next round's first word opens; the host's override and the ready-up both end up here. */
+function startRound(s: GameState, now: number) {
+  s.phase = 'word';
+  s.intermission = null;
+  s.roundIndex += 1;
+  openWord(s, s.wordIndex + 1, now);
+}
 
 function openWord(s: GameState, index: number, now: number) {
   s.wordIndex = index;
@@ -451,6 +485,11 @@ function advanceHost(s: GameState, now: number): boolean {
 }
 
 function advanceWord(s: GameState, now: number, fx: Effect[]): boolean {
+  if (s.phase === 'intermission' && s.intermission) {
+    if (!everyoneReady(s) || s.intermission.minUntil > now) return false;
+    startRound(s, now);
+    return true;
+  }
   const w = s.word;
   if (s.phase !== 'word' || !w) return false;
   const due = w.deadline !== null && w.deadline <= now;
@@ -504,7 +543,12 @@ function advanceWord(s: GameState, now: number, fx: Effect[]): boolean {
     case 'done': {
       if (!due) return false;
       const at = w.deadline!;
-      if (w.index + 1 < s.words.length) openWord(s, w.index + 1, at);
+      if (w.index + 1 < s.words.length && (w.index + 1) % s.config.wordsPerRound === 0) {
+        s.phase = 'intermission';
+        s.word = null;
+        s.intermission = { minUntil: at + s.rules.intermissionMinMs, ready: [] };
+        fx.push({ type: 'cue', name: 'round' });
+      } else if (w.index + 1 < s.words.length) openWord(s, w.index + 1, at);
       else {
         s.phase = 'final';
         s.word = null;

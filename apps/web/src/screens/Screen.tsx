@@ -5,6 +5,7 @@ import { client, useAudio, useClient } from '../client';
 import { Countdown, TimerBar } from '../components';
 import { playCue } from '../sfx';
 import { Waveform } from '../sound';
+import { AWARD_TITLES, awardWinners, progressLabel } from '../labels';
 
 /**
  * The TV main screen: join a room, attach to a household, then show whatever the game is doing.
@@ -142,16 +143,23 @@ function TvView({ view }: { view: View }) {
       <header className="tv-top">
         <span className="tv-brand">Hot Mic</span>
         <span className="tv-top-mid">
-          {view.phase === 'word' && `Word ${view.wordNumber} of ${view.totalWords}`}
-          {view.phase === 'final' && 'Game over'}
+          {view.phase !== 'lobby' && progressLabel(view)}
         </span>
         <span className="tv-room">Room {view.roomCode}</span>
       </header>
-      <div className={`tv-body ${lobby ? 'lobby' : ''}`}>
+      <div className={`tv-body ${lobby || view.phase === 'intermission' ? 'lobby' : ''}`}>
         <section className="tv-stage">
-          {lobby ? <TvLobby view={view} /> : view.phase === 'final' ? <TvFinal view={view} /> : view.word && <TvWord view={view} word={view.word} byId={byId} />}
+          {lobby ? (
+            <TvLobby view={view} />
+          ) : view.phase === 'final' ? (
+            <TvFinal view={view} />
+          ) : view.phase === 'intermission' ? (
+            <TvIntermission view={view} />
+          ) : (
+            view.word && <TvWord view={view} word={view.word} byId={byId} />
+          )}
         </section>
-        {!lobby && <TvScores view={view} />}
+        {!lobby && view.phase !== 'intermission' && <TvScores view={view} />}
       </div>
     </div>
   );
@@ -332,6 +340,48 @@ function TvWord({ view, word, byId }: { view: View; word: WordView; byId: Map<st
   }
 }
 
+function TvIntermission({ view }: { view: View }) {
+  const im = view.intermission!;
+  const sorted = [...view.players].filter((p) => !p.kicked || p.score > 0).sort((a, b) => b.score - a.score);
+  const waiting = view.players.filter((p) => !p.kicked && p.connected && !im.ready.includes(p.id));
+  return (
+    <div className="tv-inter">
+      <div className="tv-verdict">Round {view.roundNumber} done</div>
+      <table className="tv-leaders">
+        <thead>
+          <tr>
+            <th />
+            <th>Score</th>
+            <th>Boos cast</th>
+            <th>Overruled</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((p) => (
+            <tr key={p.id} className={p.connected ? '' : 'away'}>
+              <td className="name">
+                <span className={`tv-tick ${im.ready.includes(p.id) ? 'on' : ''}`}>{im.ready.includes(p.id) ? '✓' : ''}</span>
+                {p.name}
+              </td>
+              <td className="score">{p.score}</td>
+              <td>{p.stats.boosCast}</td>
+              <td>{p.stats.overruledBoos}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="tv-hint">
+        {waiting.length > 0 ? `Tap Ready on your phone · waiting for ${waiting.map((p) => p.name).join(', ')}` : 'Everyone is ready'}
+        {im.minUntil > client.serverNow() && (
+          <>
+            {' · '}next round in at least <Countdown deadline={im.minUntil} /> s
+          </>
+        )}
+      </p>
+    </div>
+  );
+}
+
 function TvFinal({ view }: { view: View }) {
   const sorted = [...view.players].filter((p) => !p.kicked || p.score > 0).sort((a, b) => b.score - a.score);
   const top = sorted[0];
@@ -348,6 +398,17 @@ function TvFinal({ view }: { view: View }) {
           </li>
         ))}
       </ol>
+      {view.awards.length > 0 && (
+        <ul className="tv-awards">
+          {view.awards.map((a) => (
+            <li key={a.kind}>
+              <div className="tv-award-title">{AWARD_TITLES[a.kind].title}</div>
+              <div className="tv-award-who">{awardWinners(a, view)}</div>
+              <div className="tv-award-why">{AWARD_TITLES[a.kind].why(a.value)}</div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

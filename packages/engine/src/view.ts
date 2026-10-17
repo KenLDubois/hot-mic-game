@@ -1,6 +1,21 @@
-import type { PlayerView, View, WordView } from '@hot-mic/shared';
+import type { AwardView, PlayerView, View, WordView } from '@hot-mic/shared';
 import { canGrab, eligibleVoters } from './engine.js';
 import type { GameState } from './state.js';
+
+/** The three final awards. Ties share one, and one nobody earned is left out. */
+export function awards(s: GameState): AwardView[] {
+  const players = s.playerOrder.map((id) => s.players[id]!).filter((p) => !p.kicked);
+  const by = (kind: AwardView['kind'], value: (p: (typeof players)[number]) => number): AwardView[] => {
+    const top = Math.max(0, ...players.map(value));
+    if (top === 0) return [];
+    return [{ kind, value: top, playerIds: players.filter((p) => value(p) === top).map((p) => p.id) }];
+  };
+  return [
+    ...by('hater', (p) => p.stats.overruledBoos),
+    ...by('generous', (p) => p.stats.hurraysCast),
+    ...by('stolen', (p) => p.stats.stolenFrom),
+  ];
+}
 
 /**
  * The complete view for one device. Other players' votes appear only as a
@@ -57,11 +72,17 @@ export function viewFor(s: GameState, playerId: string, now: number, roomCode: s
       screen: false,
       playerId,
       isHost: playerId === s.hostId,
+      ready: !!s.intermission?.ready.includes(playerId),
       vote: attempt?.votes[playerId] ?? null,
       canGrab: !!w && w.status === 'open' && canGrab(s, w, playerId),
     },
+    roundNumber: s.phase === 'lobby' ? 0 : s.roundIndex + 1,
+    totalRounds: s.config.rounds,
+    wordInRound: w ? (w.index % s.config.wordsPerRound) + 1 : 0,
     wordNumber: w ? w.index + 1 : 0,
     totalWords: s.words.length,
+    intermission: s.intermission,
+    awards: s.phase === 'final' ? awards(s) : [],
     // The server fills these in; devices and media are not game rules.
     devices: [],
     word,

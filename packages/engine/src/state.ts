@@ -57,7 +57,7 @@ export interface WordState {
 export interface GameState {
   version: number;
   rules: Rules;
-  phase: 'lobby' | 'word' | 'final';
+  phase: 'lobby' | 'word' | 'intermission' | 'final';
   config: GameConfig;
   hostId: string | null;
   /** When the host went away, if they are away. */
@@ -69,6 +69,9 @@ export interface GameState {
   words: string[];
   wordIndex: number;
   word: WordState | null;
+  /** 0-based round in play; during an intermission, the one that just ended. */
+  roundIndex: number;
+  intermission: { minUntil: number; ready: string[] } | null;
   counters: { household: number; attempt: number };
 }
 
@@ -80,12 +83,13 @@ export type GameEvent =
   | { type: 'playerJoined'; playerId: string; name: string; household: HouseholdChoice }
   | { type: 'playerConnected'; playerId: string }
   | { type: 'playerDisconnected'; playerId: string }
-  | { type: 'setConfig'; playerId: string; wordsPerRound?: number; packIds?: string[] }
+  | { type: 'setConfig'; playerId: string; rounds?: number; wordsPerRound?: number; packIds?: string[] }
   | { type: 'startGame'; playerId: string; words: string[] }
   | { type: 'grab'; playerId: string; wordId: string }
   | { type: 'micPress'; playerId: string; attemptId: string }
   | { type: 'micRelease'; playerId: string; attemptId: string }
   | { type: 'vote'; playerId: string; attemptId: string; vote: Vote }
+  | { type: 'ready'; playerId: string }
   | { type: 'hostAction'; playerId: string; action: HostActionName; targetId?: string }
   | { type: 'tick' };
 
@@ -93,7 +97,7 @@ export type Effect =
   /** The singer may now send audio. */
   | { type: 'grantAudio'; playerId: string; attemptId: string }
   | { type: 'revokeAudio'; playerId: string; attemptId: string }
-  | { type: 'cue'; name: 'grab' | 'boo' | 'point' | 'steal' | 'final' }
+  | { type: 'cue'; name: 'grab' | 'boo' | 'point' | 'steal' | 'round' | 'final' }
   | { type: 'error'; playerId: string; code: string; message: string }
   /** The server should drop this player's sockets. */
   | { type: 'kicked'; playerId: string };

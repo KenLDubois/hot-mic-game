@@ -17,6 +17,7 @@ const FAST = {
   stealCountdownMs: 100,
   resultHoldMs: 100,
   doneHoldMs: 100,
+  intermissionMinMs: 300,
 };
 
 let server: ReturnType<typeof createGameServer>;
@@ -127,5 +128,30 @@ describe('a full game with bots', () => {
     const total = v.players.reduce((n, p) => n + p.score, 0);
     expect(total % 2).toBe(0); // every point is a 2-point song
     expect(v.players.every((p) => p.connected || p.kicked)).toBe(true);
+  }, 30_000);
+
+  it('runs two rounds with an intermission where everyone taps Ready', async () => {
+    const host = new Bot({ url, name: 'Host', behavior: 'always-grab', speed: 0.04 });
+    const other = new Bot({ url, name: 'B1', behavior: 'normal', speed: 0.04 });
+    bots.push(host, other);
+    const session = await host.create('Home');
+    await other.join(session.roomCode, 'Away');
+
+    // A human-ish observer who has to tap Ready like everyone else.
+    const observer = client();
+    await ask(observer, 'join', { roomCode: session.roomCode, name: 'Watcher', householdName: 'Away' });
+    const phases: string[] = [];
+    observer.on('view', (v: View) => {
+      if (phases.at(-1) !== v.phase) phases.push(v.phase);
+      if (v.phase === 'intermission' && !v.you.ready) void ask(observer, 'ready');
+    });
+    const final = nextView(observer, (v) => v.phase === 'final');
+    await host.setConfig({ rounds: 2, wordsPerRound: 2 });
+    await host.startGame();
+
+    const v = await final;
+    expect(phases).toEqual(['lobby', 'word', 'intermission', 'word', 'final']);
+    expect(v.totalRounds).toBe(2);
+    expect(v.totalWords).toBe(4);
   }, 30_000);
 });

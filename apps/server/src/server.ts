@@ -196,7 +196,7 @@ export function createGameServer(opts: ServerOptions) {
     });
 
     inRoom('setConfig', (msg, room, playerId) =>
-      room.dispatch({ type: 'setConfig', playerId, wordsPerRound: msg.wordsPerRound, packIds: msg.packIds }),
+      room.dispatch({ type: 'setConfig', playerId, rounds: msg.rounds, wordsPerRound: msg.wordsPerRound, packIds: msg.packIds }),
     );
 
     inRoom('startGame', (_msg, room, playerId) => {
@@ -215,6 +215,9 @@ export function createGameServer(opts: ServerOptions) {
     });
     inRoom('vote', (msg, room, playerId) => {
       room.dispatch({ type: 'vote', playerId, attemptId: msg.attemptId, vote: msg.vote });
+    });
+    inRoom('ready', (_msg, room, playerId) => {
+      room.dispatch({ type: 'ready', playerId });
     });
     inRoom('setSpeaker', (msg, room, playerId) => {
       const message = room.setSpeaker(playerId, msg.householdId, msg.deviceId);

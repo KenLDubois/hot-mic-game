@@ -4,7 +4,7 @@ A self-hosted online party game, Pass The Mic meets Kahoot. A word appears, ever
 
 The design doc and the build plan are the source of truth; this README only covers running and developing the code.
 
-**Status: Milestone 3 (TV main screen).** The singer's voice reaches every other household through the app, and a TV can show the game. Without the audio server (see below) the game still runs and can be played over a video call.
+**Status: Milestone 4 (rounds and leaderboard).** A game is the host's chosen rounds, with an intermission leaderboard and ready-up between them and awards at the end. The singer's voice reaches every other household through the app, and a TV can show the game. Without the audio server (see below) the game still runs and can be played over a video call.
 
 ## Play it
 
@@ -56,6 +56,10 @@ Open `/screen` in the TV's browser (or use the link in the lobby's "TV" hint, wh
 
 `tools/e2e/tv.mjs` checks this in a 1920x1080 browser (same setup as the audio check).
 
+### Rounds
+
+The host picks the number of rounds and words per round in the lobby. Between rounds everyone sees the leaderboard (score, boos cast, overruled boos) and taps Ready; the next round starts once everyone connected is ready and 20 seconds have passed. The host can start it sooner. `tools/e2e/rounds.mjs` plays two rounds in real browsers; its header has the short-timer `HOT_MIC_RULES` to start the server with. `HOT_MIC_RULES` takes any of the timers in `packages/shared/src/config.ts` as JSON.
+
 ### Fill a room with bots
 
 Test on one phone by letting scripted bots be the other players:
@@ -63,7 +67,7 @@ Test on one phone by letting scripted bots be the other players:
 ```sh
 pnpm bots --room ABCD --count 3                    # join an existing room
 pnpm bots --room ABCD --count 2 --behavior booer   # always boo
-pnpm bots --create --count 4 --words 5             # bots host and play their own game
+pnpm bots --create --count 4 --words 5 --rounds 2  # bots host and play their own game
 ```
 
 Behaviors: `normal`, `always-grab`, `never-grab`, `never-vote`, `random-votes`, `booer`, `hurrayer`, `disconnect-mid-song`. Add `--url` for a server that isn't on `localhost:3000`, and `--speed 0.2` to make the bots five times quicker.

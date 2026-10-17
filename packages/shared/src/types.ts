@@ -1,7 +1,7 @@
 import type { GameConfig } from './config.js';
 
 export type Vote = 'boo' | 'hurray';
-export type Phase = 'lobby' | 'word' | 'final';
+export type Phase = 'lobby' | 'word' | 'intermission' | 'final';
 export type WordStatus = 'open' | 'singing' | 'voting' | 'result' | 'steal' | 'done';
 
 export interface PlayerStats {
@@ -67,6 +67,21 @@ export interface WordView {
   outcome: OutcomeView | null;
 }
 
+export interface IntermissionView {
+  /** Server timestamp before which the next round cannot start. */
+  minUntil: number;
+  /** Players who have tapped Ready. */
+  ready: string[];
+}
+
+/** A final award. Ties share it; an award nobody earned is left out. */
+export interface AwardView {
+  kind: 'hater' | 'generous' | 'stolen';
+  playerIds: string[];
+  /** Overruled boos, hurrays cast, or times stolen from. */
+  value: number;
+}
+
 export interface PackInfo {
   id: string;
   name: string;
@@ -82,7 +97,7 @@ export interface MediaInfo {
   playRemote: boolean;
 }
 
-export type CueName = 'grab' | 'boo' | 'point' | 'steal' | 'final';
+export type CueName = 'grab' | 'boo' | 'point' | 'steal' | 'round' | 'final';
 
 export interface DeviceView {
   id: string;
@@ -109,12 +124,21 @@ export interface View {
     screen: boolean;
     playerId: string;
     isHost: boolean;
+    /** Tapped Ready in this intermission. */
+    ready: boolean;
     /** This device's own vote on the current attempt. */
     vote: Vote | null;
     canGrab: boolean;
   };
+  /** 1-based round, and the word within it. During an intermission, the round that just ended. */
+  roundNumber: number;
+  totalRounds: number;
+  wordInRound: number;
   wordNumber: number;
   totalWords: number;
+  intermission: IntermissionView | null;
+  /** Final results only. */
+  awards: AwardView[];
   word: WordView | null;
   /** Devices that can play audio, filled in by the server. */
   devices: DeviceView[];

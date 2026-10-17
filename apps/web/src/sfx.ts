@@ -23,6 +23,10 @@ const CUES: Record<CueName, Note[]> = {
     { at: 0, freq: 600, dur: 0.18, type: 'square', gain: 0.14, slideTo: 900 },
     { at: 0.2, freq: 600, dur: 0.18, type: 'square', gain: 0.14, slideTo: 900 },
   ],
+  round: [
+    { at: 0, freq: 660, dur: 0.16, type: 'triangle' },
+    { at: 0.16, freq: 880, dur: 0.3, type: 'triangle' },
+  ],
   final: [
     { at: 0, freq: 523, dur: 0.18, type: 'triangle' },
     { at: 0.18, freq: 659, dur: 0.18, type: 'triangle' },

@@ -3,6 +3,7 @@ import type { PlayerView, View, Vote, WordView } from '@hot-mic/shared';
 import { client, useAudio } from '../client';
 import { SpeakerPanel, Waveform } from '../sound';
 import { Countdown, TimerBar, useNow } from '../components';
+import { AWARD_TITLES, awardWinners, progressLabel } from '../labels';
 
 export function Game({ view }: { view: View }) {
   const players = [...view.players].filter((p) => !p.kicked || p.score > 0);
@@ -22,7 +23,7 @@ export function Game({ view }: { view: View }) {
   return (
     <main className="game">
       <header className="topbar">
-        <span>{view.phase === 'final' ? 'Game over' : `Word ${view.wordNumber} of ${view.totalWords}`}</span>
+        <span>{progressLabel(view)}</span>
         <span className="muted">
           {audio.enabled && (
             <button className="link" onClick={() => setSoundOpen(!soundOpen)}>
@@ -40,11 +41,15 @@ export function Game({ view }: { view: View }) {
 
       {view.phase === 'final' ? (
         <Final view={view} />
+      ) : view.phase === 'intermission' ? (
+        <Intermission view={view} />
       ) : (
         view.word && <WordScreen view={view} word={view.word} byId={byId} />
       )}
 
-      <Scoreboard players={players} youId={view.you.playerId} singerId={view.word?.singerId ?? null} final={view.phase === 'final'} />
+      {view.phase !== 'intermission' && (
+        <Scoreboard players={players} youId={view.you.playerId} singerId={view.word?.singerId ?? null} final={view.phase === 'final'} />
+      )}
       {view.you.isHost && view.phase === 'word' && view.word && <HostControls word={view.word} />}
       {view.phase !== 'final' && (
         <button className="link" onClick={() => confirm('Leave this game? You can rejoin with the room code.') && client.leave()}>
@@ -315,6 +320,71 @@ function HostControls({ word }: { word: WordView }) {
   );
 }
 
+/** Between rounds: scores and boo stats, then everyone taps Ready. */
+function Intermission({ view }: { view: View }) {
+  const im = view.intermission!;
+  const now = useNow();
+  const here = view.players.filter((p) => !p.kicked && p.connected);
+  const sorted = [...view.players].filter((p) => !p.kicked || p.score > 0).sort((a, b) => b.score - a.score);
+  const waiting = here.filter((p) => !im.ready.includes(p.id));
+  const holding = im.minUntil > now;
+  return (
+    <section className="intermission">
+      <h2>Round {view.roundNumber} done</h2>
+      <table className="leaders">
+        <thead>
+          <tr>
+            <th />
+            <th>Score</th>
+            <th title="Boos cast">Boos</th>
+            <th title="Boos that lost the vote">Overruled</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((p) => (
+            <tr key={p.id} className={`${p.id === view.you.playerId ? 'you' : ''} ${p.connected ? '' : 'away'}`}>
+              <td className="name">
+                {im.ready.includes(p.id) && <span aria-label="ready">✓ </span>}
+                {p.name}
+                {p.id === view.you.playerId && <span className="muted"> (you)</span>}
+              </td>
+              <td className="score">{p.score}</td>
+              <td>{p.stats.boosCast}</td>
+              <td>{p.stats.overruledBoos}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <button className="primary" disabled={view.you.ready} onClick={() => void client.send('ready', {})}>
+        {view.you.ready ? 'Ready ✓' : 'Ready'}
+      </button>
+      <p className="hint">
+        {waiting.length > 0 ? `Waiting for ${waiting.map((p) => p.name).join(', ')}` : holding ? 'Everyone is ready' : 'Starting…'}
+        {holding && <> · next round in at least <Countdown deadline={im.minUntil} /> s</>}
+      </p>
+      {view.you.isHost && (
+        <button className="link" onClick={() => void client.send('hostAction', { action: 'forceNext' })}>
+          Start the next round now
+        </button>
+      )}
+    </section>
+  );
+}
+
+function AwardList({ view }: { view: View }) {
+  if (view.awards.length === 0) return null;
+  return (
+    <ul className="awards">
+      {view.awards.map((a) => (
+        <li key={a.kind}>
+          <strong>{AWARD_TITLES[a.kind].title}</strong> {awardWinners(a, view)}
+          <span className="muted"> · {AWARD_TITLES[a.kind].why(a.value)}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function Final({ view }: { view: View }) {
   const sorted = [...view.players].sort((a, b) => b.score - a.score);
   const top = sorted[0];
@@ -324,6 +394,7 @@ function Final({ view }: { view: View }) {
       <div className="verdict point">
         {tied.length > 1 ? `Tied: ${tied.map((p) => p.name).join(' & ')}` : `${top?.name ?? 'Nobody'} wins!`}
       </div>
+      <AwardList view={view} />
       {view.you.isHost ? (
         <button className="primary" onClick={() => void client.send('hostAction', { action: 'newGame' })}>
           Back to lobby

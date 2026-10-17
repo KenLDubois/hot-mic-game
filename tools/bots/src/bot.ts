@@ -115,6 +115,10 @@ export class Bot {
   }
 
   private react(v: View) {
+    if (v.phase === 'intermission' && !v.you.ready && this.opts.behavior !== 'never-vote') {
+      this.once(`ready:${v.roundNumber}`, () => this.later(between(1000, 6000), () => this.socket.emit('ready', {})));
+      return;
+    }
     const w = v.word;
     if (v.phase !== 'word' || !w) return;
     const me = v.you.playerId;
