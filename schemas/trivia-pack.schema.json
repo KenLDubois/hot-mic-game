@@ -43,6 +43,9 @@
             "type": "string",
             "maxLength": 500,
             "pattern": "^https?:\\/\\/\\S+$"
+          },
+          "unconfirmed": {
+            "type": "boolean"
           }
         },
         "required": [

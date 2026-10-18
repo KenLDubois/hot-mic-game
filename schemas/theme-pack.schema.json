@@ -1,0 +1,196 @@
+{
+  "title": "Hot Mic theme pack (theme.json inside the zip)",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "number",
+      "const": 1
+    },
+    "type": {
+      "type": "string",
+      "const": "theme"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60
+    },
+    "words": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "difficulty": {
+            "type": "string",
+            "enum": [
+              "easy",
+              "medium",
+              "hard"
+            ]
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "maxItems": 5000
+    },
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "minItems": 2,
+            "maxItems": 4
+          },
+          "answer": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 500,
+            "pattern": "^https?:\\/\\/\\S+$"
+          },
+          "unconfirmed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "question",
+          "choices",
+          "answer"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "maxItems": 2000
+    },
+    "style": {
+      "type": "object",
+      "properties": {
+        "colors": {
+          "type": "object",
+          "properties": {
+            "bg": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "panel": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "panel2": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "text": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "muted": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "primary": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "accent": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "good": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "bad": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "font": {
+          "type": "string",
+          "enum": [
+            "system",
+            "serif",
+            "rounded",
+            "mono",
+            "display",
+            "handwriting"
+          ]
+        },
+        "background": {
+          "type": "string",
+          "maxLength": 100,
+          "pattern": "^(?!.*\\.\\.)[a-zA-Z0-9][a-zA-Z0-9_.-]*(\\/[a-zA-Z0-9_.-]+)*$"
+        },
+        "sounds": {
+          "type": "object",
+          "properties": {
+            "grab": {
+              "type": "string",
+              "maxLength": 100,
+              "pattern": "^(?!.*\\.\\.)[a-zA-Z0-9][a-zA-Z0-9_.-]*(\\/[a-zA-Z0-9_.-]+)*$"
+            },
+            "boo": {
+              "type": "string",
+              "maxLength": 100,
+              "pattern": "^(?!.*\\.\\.)[a-zA-Z0-9][a-zA-Z0-9_.-]*(\\/[a-zA-Z0-9_.-]+)*$"
+            },
+            "point": {
+              "type": "string",
+              "maxLength": 100,
+              "pattern": "^(?!.*\\.\\.)[a-zA-Z0-9][a-zA-Z0-9_.-]*(\\/[a-zA-Z0-9_.-]+)*$"
+            },
+            "steal": {
+              "type": "string",
+              "maxLength": 100,
+              "pattern": "^(?!.*\\.\\.)[a-zA-Z0-9][a-zA-Z0-9_.-]*(\\/[a-zA-Z0-9_.-]+)*$"
+            },
+            "round": {
+              "type": "string",
+              "maxLength": 100,
+              "pattern": "^(?!.*\\.\\.)[a-zA-Z0-9][a-zA-Z0-9_.-]*(\\/[a-zA-Z0-9_.-]+)*$"
+            },
+            "final": {
+              "type": "string",
+              "maxLength": 100,
+              "pattern": "^(?!.*\\.\\.)[a-zA-Z0-9][a-zA-Z0-9_.-]*(\\/[a-zA-Z0-9_.-]+)*$"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "type",
+    "name"
+  ],
+  "additionalProperties": false,
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

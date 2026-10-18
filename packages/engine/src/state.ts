@@ -105,7 +105,7 @@ export type GameEvent =
   | { type: 'playerJoined'; playerId: string; name: string; household: HouseholdChoice }
   | { type: 'playerConnected'; playerId: string }
   | { type: 'playerDisconnected'; playerId: string }
-  | { type: 'setConfig'; playerId: string; rounds?: number; wordsPerRound?: number; packIds?: string[]; trivia?: boolean; triviaPackIds?: string[] }
+  | { type: 'setConfig'; playerId: string; rounds?: number; wordsPerRound?: number; packIds?: string[]; trivia?: boolean; triviaPackIds?: string[]; themeId?: string | null }
   | { type: 'startGame'; playerId: string; words: string[]; questions?: TriviaQuestion[] }
   | { type: 'triviaAnswer'; playerId: string; questionId: string; choice: number }
   | { type: 'grab'; playerId: string; wordId: string }

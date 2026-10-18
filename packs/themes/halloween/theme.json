@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 1,
+  "type": "theme",
+  "name": "Halloween",
+  "words": [
+    {
+      "text": "ghost"
+    },
+    {
+      "text": "night"
+    },
+    {
+      "text": "moon"
+    },
+    {
+      "text": "dark"
+    },
+    {
+      "text": "shadow"
+    },
+    {
+      "text": "haunted"
+    },
+    {
+      "text": "witch"
+    },
+    {
+      "text": "spell"
+    },
+    {
+      "text": "scream"
+    },
+    {
+      "text": "grave"
+    },
+    {
+      "text": "bone"
+    },
+    {
+      "text": "blood"
+    },
+    {
+      "text": "fear"
+    },
+    {
+      "text": "cry"
+    },
+    {
+      "text": "midnight"
+    },
+    {
+      "text": "cold"
+    },
+    {
+      "text": "wind"
+    },
+    {
+      "text": "storm"
+    },
+    {
+      "text": "shiver"
+    },
+    {
+      "text": "spirit"
+    },
+    {
+      "text": "devil"
+    },
+    {
+      "text": "angel"
+    },
+    {
+      "text": "fire"
+    },
+    {
+      "text": "smoke"
+    },
+    {
+      "text": "black"
+    },
+    {
+      "text": "hollow"
+    },
+    {
+      "text": "wolf"
+    },
+    {
+      "text": "howl"
+    },
+    {
+      "text": "dead"
+    },
+    {
+      "text": "death"
+    },
+    {
+      "text": "fright"
+    },
+    {
+      "text": "creep"
+    },
+    {
+      "text": "wicked"
+    },
+    {
+      "text": "thunder"
+    },
+    {
+      "text": "rain"
+    },
+    {
+      "text": "mist"
+    },
+    {
+      "text": "whisper"
+    },
+    {
+      "text": "dream"
+    },
+    {
+      "text": "nightmare"
+    },
+    {
+      "text": "monster"
+    },
+    {
+      "text": "candy"
+    },
+    {
+      "text": "trick"
+    }
+  ],
+  "style": {
+    "colors": {
+      "bg": "#0e0a14",
+      "panel": "#1d1428",
+      "panel2": "#2a1c3a",
+      "text": "#f6efe6",
+      "muted": "#b3a3c7",
+      "primary": "#ff7a1a",
+      "accent": "#7cff6b",
+      "good": "#7cff6b",
+      "bad": "#ff3b5c"
+    },
+    "font": "display",
+    "background": "background.svg",
+    "sounds": {
+      "grab": "sounds/grab.wav",
+      "boo": "sounds/boo.wav",
+      "point": "sounds/point.wav",
+      "steal": "sounds/steal.wav",
+      "round": "sounds/round.wav",
+      "final": "sounds/final.wav"
+    }
+  }
+}

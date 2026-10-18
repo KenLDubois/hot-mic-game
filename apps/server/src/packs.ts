@@ -1,15 +1,21 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { checkPack, type Pack, type PackInfo, type TriviaQuestion } from '@hot-mic/shared';
+import { loadThemeDir, type ThemeAsset } from './themes.js';
 
 export interface LoadedPack {
   id: string;
   pack: Pack;
   /** Uploaded to one room, not built in. */
   uploaded?: boolean;
+  /** Theme packs only: the files its style points to, by path inside the pack. */
+  assets?: Map<string, ThemeAsset>;
 }
 
-/** Loads every valid word and trivia pack in a folder. The file name (without .json) is the pack id. */
+/**
+ * Loads every valid pack in a folder. The file name (without .json) is the pack id.
+ * Theme packs are folders under themes/, with theme.json and their assets; the folder name is the id.
+ */
 export function loadPacks(dir: string): LoadedPack[] {
   const packs: LoadedPack[] = [];
   for (const file of readdirSync(dir).sort()) {
@@ -19,7 +25,20 @@ export function loadPacks(dir: string): LoadedPack[] {
       console.warn(`packs: ${file} is not a valid pack: ${checked.errors[0]}`);
       continue;
     }
+    if (checked.pack.type === 'theme') {
+      console.warn(`packs: ${file} is a theme; put themes in packs/themes/<name>/theme.json with their files`);
+      continue;
+    }
     packs.push({ id: basename(file, '.json'), pack: checked.pack });
+  }
+  const themes = join(dir, 'themes');
+  if (existsSync(themes)) {
+    for (const folder of readdirSync(themes).sort()) {
+      if (!existsSync(join(themes, folder, 'theme.json'))) continue;
+      const loaded = loadThemeDir(join(themes, folder));
+      if (!loaded.ok) console.warn(`packs: theme ${folder} is not valid: ${loaded.errors[0]}`);
+      else packs.push({ id: folder, pack: loaded.pack, assets: loaded.assets });
+    }
   }
   return packs;
 }
@@ -29,9 +48,21 @@ export function packInfo(packs: LoadedPack[]): PackInfo[] {
     id,
     name: pack.name,
     kind: pack.type,
-    count: pack.type === 'words' ? uniqueWords(pack.words.map((w) => w.text)).length : uniqueQuestions(pack.questions).length,
+    count: pack.type === 'trivia' ? questionsOf(pack).length : wordsOf(pack).length,
+    ...(pack.type === 'theme' ? { questions: questionsOf(pack).length } : {}),
     uploaded: !!uploaded,
   }));
+}
+
+/** The words a pack adds: a word pack's list, or the words bundled in a theme. */
+function wordsOf(pack: Pack): string[] {
+  if (pack.type === 'trivia') return [];
+  return uniqueWords((pack.type === 'words' ? pack.words : (pack.words ?? [])).map((w) => w.text));
+}
+
+function questionsOf(pack: Pack): TriviaQuestion[] {
+  if (pack.type === 'words') return [];
+  return uniqueQuestions(pack.type === 'trivia' ? pack.questions : (pack.questions ?? []));
 }
 
 function uniqueWords(words: string[]): string[] {
@@ -71,7 +102,7 @@ export function selectWords(
   random: () => number = Math.random,
 ): string[] {
   const chosen = packs.filter((p) => packIds.includes(p.id));
-  const words = uniqueWords(chosen.flatMap((p) => (p.pack.type === 'words' ? p.pack.words.map((w) => w.text) : [])));
+  const words = uniqueWords(chosen.flatMap((p) => wordsOf(p.pack)));
   return shuffle(words, random);
 }
 
@@ -86,7 +117,7 @@ export function selectQuestions(
   random: () => number = Math.random,
 ): TriviaQuestion[] {
   const chosen = packs.filter((p) => packIds.includes(p.id));
-  return shuffle(uniqueQuestions(chosen.flatMap((p) => (p.pack.type === 'trivia' ? p.pack.questions : []))), random);
+  return shuffle(uniqueQuestions(chosen.flatMap((p) => questionsOf(p.pack))), random);
 }
 
 export function availableQuestions(packs: LoadedPack[], packIds: string[]): number {

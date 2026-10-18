@@ -14,7 +14,8 @@
     "test": "vitest run",
     "typecheck": "pnpm -r typecheck",
     "bots": "pnpm --filter @hot-mic/bots start",
-    "schemas": "pnpm --filter @hot-mic/server exec tsx ../../tools/schemas.ts"
+    "schemas": "pnpm --filter @hot-mic/server exec tsx ../../tools/schemas.ts",
+    "packs:check": "pnpm --filter @hot-mic/server exec tsx ../../tools/check-pack.ts"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",

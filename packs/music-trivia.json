@@ -56,7 +56,7 @@
         "Abbey Road"
       ],
       "answer": 3,
-      "source": "https://en.wikipedia.org/wiki/Abbey_Road"
+      "source": "https://www.udiscovermusic.com/stories/four-beatles-one-zebra-crossing-london-nw8"
     },
     {
       "question": "Purple Rain is a 1984 album by which artist?",
@@ -78,7 +78,7 @@
         "Tina Turner"
       ],
       "answer": 1,
-      "source": "https://en.wikipedia.org/wiki/Aretha_Franklin"
+      "source": "https://www.ksl.com/article/46376910/queen-of-soul-aretha-franklin-dies-at-76"
     },
     {
       "question": "Which band made the 1977 album Rumours?",
@@ -89,10 +89,10 @@
         "Boston"
       ],
       "answer": 2,
-      "source": "https://en.wikipedia.org/wiki/Rumours_(Fleetwood_Mac_album)"
+      "source": "https://en.wikipedia.org/wiki/Rumours_(album)"
     },
     {
-      "question": "Which country were the members of ABBA from?",
+      "question": "In which country was ABBA formed?",
       "choices": [
         "Norway",
         "Sweden",
@@ -243,7 +243,7 @@
         "Freddie Mercury"
       ],
       "answer": 1,
-      "source": "https://en.wikipedia.org/wiki/David_Bowie"
+      "source": "https://en.wikipedia.org/wiki/Ziggy_Stardust_(character)"
     },
     {
       "question": "Which group had a 1996 hit with Wannabe?",
@@ -342,7 +342,7 @@
         "Wilson Phillips"
       ],
       "answer": 2,
-      "source": "https://en.wikipedia.org/wiki/Destiny's_Child"
+      "source": "https://en.wikipedia.org/wiki/Destiny%27s_Child"
     },
     {
       "question": "Which Jamaican singer is best known for No Woman, No Cry?",
@@ -375,7 +375,7 @@
         "Boston"
       ],
       "answer": 1,
-      "source": "https://en.wikipedia.org/wiki/Don't_Stop_Believin'"
+      "source": "https://en.wikipedia.org/wiki/Don%27t_Stop_Believin%27"
     },
     {
       "question": "Which producer and songwriter, Billie Eilish's brother, co-wrote her early hits?",
@@ -386,7 +386,7 @@
         "Pharrell Williams"
       ],
       "answer": 2,
-      "source": "https://en.wikipedia.org/wiki/Finneas_O'Connell"
+      "source": "https://en.wikipedia.org/wiki/Finneas_O%27Connell"
     },
     {
       "question": "Who is the lead singer of The Rolling Stones?",

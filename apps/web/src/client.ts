@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import type { Ack, ClientMessages, CueName, MediaInfo, PackPreview, RoomInfo, ScreenSession, SessionInfo, View } from '@hot-mic/shared';
 import { AudioSession, type AudioState } from './audio';
+import { applyTheme } from './theme';
 
 /** /screen is the TV main screen; everything else is a phone. */
 export const IS_SCREEN = location.pathname.startsWith('/screen');
@@ -87,6 +88,7 @@ class GameClient {
     });
     this.socket.on('view', (view: View) => {
       if (!this.state.view) void this.keepAwake();
+      applyTheme(view.theme);
       this.set({ view, notice: null });
     });
     this.socket.on('clockPong', (m: { clientTime: number; serverTime: number }) => {
@@ -203,9 +205,9 @@ class GameClient {
     return r.ok ? r.data : r.message.split('\n');
   }
 
-  /** Adds a pack file to the room. Returns what is wrong with it, or null when it went in. */
-  async uploadPack(text: string): Promise<string[] | null> {
-    const r = await this.request('uploadPack', { text });
+  /** Adds a pack file (text) or a theme zip (bytes) to the room. Returns what is wrong with it, or null when it went in. */
+  async uploadPack(msg: ClientMessages['uploadPack']): Promise<string[] | null> {
+    const r = await this.request('uploadPack', msg);
     return r.ok ? null : r.message.split('\n');
   }
 
@@ -217,6 +219,7 @@ class GameClient {
   leave(notice: string | null = null) {
     this.saved = null;
     save(null);
+    applyTheme(null);
     this.set({ view: null, restoring: false, notice });
     void this.audio.disconnect();
     void this.wakeLock?.release().catch(() => {});

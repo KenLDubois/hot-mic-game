@@ -18,6 +18,7 @@ import {
 import { NoopMediaAdapter, type MediaAdapter } from './media.js';
 import { loadPacks, selectQuestions, selectWords, type LoadedPack } from './packs.js';
 import { Room } from './room.js';
+import type { ThemeAsset } from './themes.js';
 
 export interface ServerOptions {
   port?: number;
@@ -49,12 +50,34 @@ export function createGameServer(opts: ServerOptions) {
   const packs: LoadedPack[] = loadPacks(opts.packsDir);
   const rooms = new Map<string, Room>();
 
+  /** /theme-assets/<builtin or room code>/<theme id>/<path> */
+  function themeAsset(url: string): ThemeAsset | undefined {
+    const [scope, id, ...rest] = decodeURIComponent(url.split('?')[0]!.slice('/theme-assets/'.length)).split('/');
+    const path = rest.join('/');
+    if (!scope || !id || !path) return undefined;
+    if (scope === 'builtin') return packs.find((p) => p.id === id)?.assets?.get(path);
+    return rooms.get(scope)?.themeAsset(id, path);
+  }
+
   const serveStatic =
     opts.staticDir && existsSync(opts.staticDir)
       ? sirv(opts.staticDir, { dev: false, single: true })
       : null;
   const indexHtml = serveStatic ? join(opts.staticDir!, 'index.html') : null;
   const http: HttpServer = createServer((req, res) => {
+    const asset = req.url?.startsWith('/theme-assets/') ? themeAsset(req.url) : undefined;
+    if (req.url?.startsWith('/theme-assets/')) {
+      if (!asset) return void res.writeHead(404, { 'content-type': 'text/plain' }).end('No such theme file');
+      // Served as plain files that cannot run anything, even if opened directly.
+      res.writeHead(200, {
+        'content-type': asset.type,
+        'content-length': asset.data.byteLength,
+        'x-content-type-options': 'nosniff',
+        'content-security-policy': "sandbox; default-src 'none'; style-src 'unsafe-inline'",
+        'cache-control': 'public, max-age=300',
+      });
+      return void res.end(asset.data);
+    }
     if (req.url === '/healthz') {
       res.writeHead(200, { 'content-type': 'text/plain' }).end('ok');
     } else if (serveStatic) {
@@ -65,7 +88,8 @@ export function createGameServer(opts: ServerOptions) {
       res.writeHead(200, { 'content-type': 'text/plain' }).end('Hot Mic server. Build the web app to serve it from here.');
     }
   });
-  const io = new Server<Record<string, never>, ServerEvents, Record<string, never>, SocketData>(http);
+  // Room for a 4 MB theme zip.
+  const io = new Server<Record<string, never>, ServerEvents, Record<string, never>, SocketData>(http, { maxHttpBufferSize: 6e6 });
 
   function newRoom(): Room {
     let code: string;
@@ -204,6 +228,7 @@ export function createGameServer(opts: ServerOptions) {
         packIds: msg.packIds,
         trivia: msg.trivia,
         triviaPackIds: msg.triviaPackIds,
+        themeId: msg.themeId,
       }),
     );
 
@@ -225,14 +250,14 @@ export function createGameServer(opts: ServerOptions) {
       if (!room || !playerId) return ack(fail('no-session', 'Join a room first'));
       const denied = hostOnly(room, playerId);
       if (denied) return ack(denied);
-      const result = room.uploadPack(playerId, msg.text);
+      const result = room.uploadPack(playerId, msg);
       ack(result.ok ? { ok: true, data: { id: result.id, preview: result.preview } } : { ok: false, code: 'bad-pack', message: result.errors.join('\n') });
     });
 
     inRoom('startGame', (_msg, room, playerId) => {
       const { packIds, triviaPackIds, trivia } = room.game.config;
-      const words = selectWords(room.allPacks(), packIds);
-      const questions = trivia ? selectQuestions(room.allPacks(), triviaPackIds) : [];
+      const words = selectWords(room.allPacks(), room.poolIds(packIds));
+      const questions = trivia ? selectQuestions(room.allPacks(), room.poolIds(triviaPackIds)) : [];
       return room.dispatch({ type: 'startGame', playerId, words, questions });
     });
 

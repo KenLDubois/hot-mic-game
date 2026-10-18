@@ -1,5 +1,6 @@
 import type { CueName } from '@hot-mic/shared';
 import { client } from './client';
+import { themeSounds } from './theme';
 
 type Note = { at: number; freq: number; dur: number; type?: OscillatorType; gain?: number; slideTo?: number };
 
@@ -35,10 +36,35 @@ const CUES: Record<CueName, Note[]> = {
   ],
 };
 
+/** Decoded theme sounds by URL; a sound that is still loading plays the built-in cue this once. */
+const decoded = new Map<string, AudioBuffer | null>();
+
+function playThemeSound(ctx: AudioContext, url: string): boolean {
+  const buffer = decoded.get(url);
+  if (buffer) {
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.start();
+    return true;
+  }
+  if (!decoded.has(url)) {
+    decoded.set(url, null);
+    fetch(url)
+      .then((r) => r.arrayBuffer())
+      .then((bytes) => ctx.decodeAudioData(bytes))
+      .then((b) => void decoded.set(url, b))
+      .catch(() => {});
+  }
+  return false;
+}
+
 /** Plays a cue if the browser lets this page make sound yet; silent otherwise. */
 export function playCue(name: CueName) {
   const ctx = client.audio.runningContext();
   if (!ctx) return;
+  const themed = themeSounds()[name];
+  if (themed && playThemeSound(ctx, themed)) return;
   const t0 = ctx.currentTime;
   for (const n of CUES[name]) {
     const osc = ctx.createOscillator();
