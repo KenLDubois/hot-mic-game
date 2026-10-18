@@ -1,5 +1,7 @@
 import type {
   GameConfig,
+  IntermissionStage,
+  TriviaQuestion,
   OutcomeView,
   PlayerStats,
   ResultView,
@@ -54,6 +56,24 @@ export interface WordState {
   outcome: OutcomeView | null;
 }
 
+export interface TriviaState {
+  id: string;
+  question: string;
+  choices: string[];
+  answer: number;
+  source: string | null;
+  /** Each player's locked-in choice. */
+  answers: Record<string, number>;
+}
+
+export interface IntermissionState {
+  stage: IntermissionStage;
+  trivia: TriviaState | null;
+  revealUntil: number | null;
+  minUntil: number | null;
+  ready: string[];
+}
+
 export interface GameState {
   version: number;
   rules: Rules;
@@ -67,24 +87,27 @@ export interface GameState {
   playerOrder: string[];
   households: Household[];
   words: string[];
+  /** One question for each intermission, when trivia is on. */
+  questions: TriviaQuestion[];
   wordIndex: number;
   word: WordState | null;
   /** 0-based round in play; during an intermission, the one that just ended. */
   roundIndex: number;
-  intermission: { minUntil: number; ready: string[] } | null;
+  intermission: IntermissionState | null;
   counters: { household: number; attempt: number };
 }
 
 export type HouseholdChoice = { kind: 'existing'; id: string } | { kind: 'new'; name: string };
 
-export type HostActionName = 'skipWord' | 'forceNext' | 'newGame' | 'kick';
+export type HostActionName = 'skipWord' | 'forceNext' | 'revealTrivia' | 'newGame' | 'kick';
 
 export type GameEvent =
   | { type: 'playerJoined'; playerId: string; name: string; household: HouseholdChoice }
   | { type: 'playerConnected'; playerId: string }
   | { type: 'playerDisconnected'; playerId: string }
-  | { type: 'setConfig'; playerId: string; rounds?: number; wordsPerRound?: number; packIds?: string[] }
-  | { type: 'startGame'; playerId: string; words: string[] }
+  | { type: 'setConfig'; playerId: string; rounds?: number; wordsPerRound?: number; packIds?: string[]; trivia?: boolean; triviaPackIds?: string[] }
+  | { type: 'startGame'; playerId: string; words: string[]; questions?: TriviaQuestion[] }
+  | { type: 'triviaAnswer'; playerId: string; questionId: string; choice: number }
   | { type: 'grab'; playerId: string; wordId: string }
   | { type: 'micPress'; playerId: string; attemptId: string }
   | { type: 'micRelease'; playerId: string; attemptId: string }

@@ -4,7 +4,7 @@ A self-hosted online party game, Pass The Mic meets Kahoot. A word appears, ever
 
 The design doc and the build plan are the source of truth; this README only covers running and developing the code.
 
-**Status: Milestone 4 (rounds and leaderboard).** A game is the host's chosen rounds, with an intermission leaderboard and ready-up between them and awards at the end. The singer's voice reaches every other household through the app, and a TV can show the game. Without the audio server (see below) the game still runs and can be played over a video call.
+**Status: Milestone 5 (trivia and content packs).** A game is the host's chosen rounds, with optional music trivia, an intermission leaderboard and ready-up between them, and awards at the end. Word and trivia packs are plain JSON that the host can add in the lobby. The singer's voice reaches every other household through the app, and a TV can show the game. Without the audio server (see below) the game still runs and can be played over a video call.
 
 ## Play it
 
@@ -60,6 +60,14 @@ Open `/screen` in the TV's browser (or use the link in the lobby's "TV" hint, wh
 
 The host picks the number of rounds and words per round in the lobby. Between rounds everyone sees the leaderboard (score, boos cast, overruled boos) and taps Ready; the next round starts once everyone connected is ready and 20 seconds have passed. The host can start it sooner. `tools/e2e/rounds.mjs` plays two rounds in real browsers; its header has the short-timer `HOT_MIC_RULES` to start the server with. `HOT_MIC_RULES` takes any of the timers in `packages/shared/src/config.ts` as JSON.
 
+### Packs and trivia
+
+Game content is plain JSON in `packs/`: word packs (`"type": "words"`) and trivia packs (`"type": "trivia"`, each question with 2 to 4 choices, the index of the right one as `answer`, and an optional `source` link). The file name is the pack id, and every valid file in the folder is offered in the lobby. With trivia on, everyone answers one music question between rounds (a correct answer is 1 point) before the leaderboard.
+
+In the lobby the host can preview any pack, or choose a pack file from their device: the server checks it, says exactly what is wrong (for example `Question 12 has no correct answer`), and shows a preview before the pack is added to that room. Uploaded packs last as long as the room.
+
+JSON Schemas for editors are in `schemas/`, generated from the same rules the server uses (`pnpm schemas` after changing `packages/shared/src/packs.ts`; a test fails if they are stale). `tools/e2e/trivia.mjs` plays trivia and a pack upload in real browsers, like `rounds.mjs`.
+
 ### Fill a room with bots
 
 Test on one phone by letting scripted bots be the other players:
@@ -67,7 +75,7 @@ Test on one phone by letting scripted bots be the other players:
 ```sh
 pnpm bots --room ABCD --count 3                    # join an existing room
 pnpm bots --room ABCD --count 2 --behavior booer   # always boo
-pnpm bots --create --count 4 --words 5 --rounds 2  # bots host and play their own game
+pnpm bots --create --count 4 --words 5 --rounds 3 --trivia  # bots host and play their own game
 ```
 
 Behaviors: `normal`, `always-grab`, `never-grab`, `never-vote`, `random-votes`, `booer`, `hurrayer`, `disconnect-mid-song`. Add `--url` for a server that isn't on `localhost:3000`, and `--speed 0.2` to make the bots five times quicker.
@@ -79,7 +87,8 @@ apps/server/      Socket.IO handling, rooms, timers, devices and speakers, Media
 apps/web/         phone view and TV screen (Vite + React)
 packages/shared/  types, Zod message schemas, default rules
 packages/engine/  pure game logic: step(state, event, now) → { state, effects }
-packs/            word packs (plain JSON); the file name is the pack id
+packs/            word and trivia packs (plain JSON); the file name is the pack id
+schemas/          JSON Schemas for the pack files, generated
 tools/bots/       scripted bot players
 tools/e2e/        real-browser audio and TV checks (Playwright + a local LiveKit)
 docker/           compose file and Caddyfile

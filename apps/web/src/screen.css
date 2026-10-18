@@ -106,3 +106,16 @@ html.tv #root { height: 100%; }
 .tv-award-title { font-size: 2rem; color: var(--primary); text-transform: uppercase; letter-spacing: 0.1em; }
 .tv-award-who { font-size: 3.4rem; font-weight: 800; margin: 0.4rem 0; }
 .tv-award-why { font-size: 2rem; color: var(--muted); }
+
+.tv-trivia { display: flex; flex-direction: column; align-items: center; gap: 2rem; text-align: center; }
+.tv-question { font-size: 5rem; font-weight: 800; line-height: 1.15; max-width: 95%; }
+.tv-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; width: 100%; }
+.tv-choice { position: relative; display: flex; align-items: center; gap: 1.5rem; background: var(--panel-2); border-radius: 1.5rem; padding: 1.6rem 2rem; font-size: 3.2rem; text-align: left; border: 0.3rem solid transparent; }
+.tv-choice.correct { border-color: var(--good); background: color-mix(in srgb, var(--good) 22%, var(--panel-2)); }
+.tv-choice.dim { opacity: 0.45; }
+.tv-letter { color: var(--primary); font-weight: 800; }
+.tv-picks { position: absolute; right: 1.5rem; bottom: 0.4rem; font-size: 1.8rem; color: var(--muted); max-width: 60%; text-align: right; }
+.tv-answered { display: flex; flex-wrap: wrap; gap: 1.2rem; justify-content: center; }
+.tv-who { font-size: 2.6rem; padding: 0.4rem 1.6rem; border-radius: 99rem; background: var(--panel-2); color: var(--muted); }
+.tv-who.done { color: var(--text); background: color-mix(in srgb, var(--good) 25%, var(--panel-2)); }
+.tv-who.away { opacity: 0.5; }

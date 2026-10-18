@@ -16,7 +16,7 @@ import {
   type SessionInfo,
 } from '@hot-mic/shared';
 import { NoopMediaAdapter, type MediaAdapter } from './media.js';
-import { loadPacks, selectWords, type LoadedPack } from './packs.js';
+import { loadPacks, selectQuestions, selectWords, type LoadedPack } from './packs.js';
 import { Room } from './room.js';
 
 export interface ServerOptions {
@@ -196,12 +196,44 @@ export function createGameServer(opts: ServerOptions) {
     });
 
     inRoom('setConfig', (msg, room, playerId) =>
-      room.dispatch({ type: 'setConfig', playerId, rounds: msg.rounds, wordsPerRound: msg.wordsPerRound, packIds: msg.packIds }),
+      room.dispatch({
+        type: 'setConfig',
+        playerId,
+        rounds: msg.rounds,
+        wordsPerRound: msg.wordsPerRound,
+        packIds: msg.packIds,
+        trivia: msg.trivia,
+        triviaPackIds: msg.triviaPackIds,
+      }),
     );
 
+    /** Pack checks answer with what is wrong in the pack, not just that something is. */
+    const hostOnly = (room: Room, playerId: string) =>
+      playerId === room.game.hostId ? null : fail('not-host', 'Only the host can do that');
+    on('previewPack', (msg, ack) => {
+      const room = socket.data.roomCode ? rooms.get(socket.data.roomCode) : undefined;
+      const playerId = socket.data.playerId;
+      if (!room || !playerId) return ack(fail('no-session', 'Join a room first'));
+      const denied = hostOnly(room, playerId);
+      if (denied) return ack(denied);
+      const result = room.previewPack(msg);
+      ack(result.ok ? { ok: true, data: result.preview } : { ok: false, code: 'bad-pack', message: result.errors.join('\n') });
+    });
+    on('uploadPack', (msg, ack) => {
+      const room = socket.data.roomCode ? rooms.get(socket.data.roomCode) : undefined;
+      const playerId = socket.data.playerId;
+      if (!room || !playerId) return ack(fail('no-session', 'Join a room first'));
+      const denied = hostOnly(room, playerId);
+      if (denied) return ack(denied);
+      const result = room.uploadPack(playerId, msg.text);
+      ack(result.ok ? { ok: true, data: { id: result.id, preview: result.preview } } : { ok: false, code: 'bad-pack', message: result.errors.join('\n') });
+    });
+
     inRoom('startGame', (_msg, room, playerId) => {
-      const words = selectWords(packs, room.game.config.packIds);
-      return room.dispatch({ type: 'startGame', playerId, words });
+      const { packIds, triviaPackIds, trivia } = room.game.config;
+      const words = selectWords(room.allPacks(), packIds);
+      const questions = trivia ? selectQuestions(room.allPacks(), triviaPackIds) : [];
+      return room.dispatch({ type: 'startGame', playerId, words, questions });
     });
 
     inRoom('grab', (msg, room, playerId) => {
@@ -212,6 +244,9 @@ export function createGameServer(opts: ServerOptions) {
     });
     inRoom('micRelease', (msg, room, playerId) => {
       room.dispatch({ type: 'micRelease', playerId, attemptId: msg.attemptId });
+    });
+    inRoom('triviaAnswer', (msg, room, playerId) => {
+      room.dispatch({ type: 'triviaAnswer', playerId, questionId: msg.questionId, choice: msg.choice });
     });
     inRoom('vote', (msg, room, playerId) => {
       room.dispatch({ type: 'vote', playerId, attemptId: msg.attemptId, vote: msg.vote });

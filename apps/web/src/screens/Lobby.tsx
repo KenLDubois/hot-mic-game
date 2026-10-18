@@ -3,6 +3,7 @@ import { LIMITS, type View } from '@hot-mic/shared';
 import { client } from '../client';
 import { PlayerChip } from '../components';
 import { MicCheck, SpeakerPanel } from '../sound';
+import { PackSetup } from './Packs';
 
 export function Lobby({ view }: { view: View }) {
   const [copied, setCopied] = useState(false);
@@ -29,13 +30,6 @@ export function Lobby({ view }: { view: View }) {
   }
 
   const act = async (p: Promise<string | null>) => setError(await p);
-
-  const packs = view.packs ?? [];
-  const toggle = (id: string) => {
-    const on = view.config.packIds.includes(id);
-    const next = on ? view.config.packIds.filter((x) => x !== id) : [...view.config.packIds, id];
-    if (next.length > 0) void act(client.send('setConfig', { packIds: next }));
-  };
 
   return (
     <main className="lobby">
@@ -107,15 +101,7 @@ export function Lobby({ view }: { view: View }) {
               +
             </button>
           </div>
-          <fieldset>
-            <legend>Word packs</legend>
-            {packs.map((p) => (
-              <label key={p.id} className="radio">
-                <input type="checkbox" checked={view.config.packIds.includes(p.id)} onChange={() => toggle(p.id)} />
-                {p.name} <span className="muted">({p.wordCount} words)</span>
-              </label>
-            ))}
-          </fieldset>
+          <PackSetup view={view} act={(p) => void act(p)} />
           {error && <p className="error">{error}</p>}
           {view.startBlocked && <p className="hint">{view.startBlocked}</p>}
           <button className="primary" disabled={!!view.startBlocked} onClick={() => act(client.send('startGame', {}))}>
@@ -128,7 +114,7 @@ export function Lobby({ view }: { view: View }) {
             Waiting for {view.players.find((p) => p.isHost)?.name ?? 'the host'} to start…
           </p>
           <p className="muted">
-            {view.config.rounds} {view.config.rounds === 1 ? 'round' : 'rounds'} of {view.config.wordsPerRound} words · {view.config.packIds.join(', ')}
+            {view.config.rounds} {view.config.rounds === 1 ? 'round' : 'rounds'} of {view.config.wordsPerRound} words{view.config.trivia && view.config.rounds > 1 ? ' · music trivia' : ''}
           </p>
         </section>
       )}

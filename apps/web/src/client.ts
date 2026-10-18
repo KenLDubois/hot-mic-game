@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { io, type Socket } from 'socket.io-client';
-import type { Ack, ClientMessages, CueName, MediaInfo, RoomInfo, ScreenSession, SessionInfo, View } from '@hot-mic/shared';
+import type { Ack, ClientMessages, CueName, MediaInfo, PackPreview, RoomInfo, ScreenSession, SessionInfo, View } from '@hot-mic/shared';
 import { AudioSession, type AudioState } from './audio';
 
 /** /screen is the TV main screen; everything else is a phone. */
@@ -195,6 +195,18 @@ class GameClient {
   async roomInfo(roomCode: string): Promise<RoomInfo | string> {
     const r = await this.request<RoomInfo>('roomInfo', { roomCode });
     return r.ok ? r.data : r.message;
+  }
+
+  /** Look inside a pack, or find out exactly what is wrong with a pack file. Nothing is added. */
+  async previewPack(msg: ClientMessages['previewPack']): Promise<PackPreview | string[]> {
+    const r = await this.request<PackPreview>('previewPack', msg);
+    return r.ok ? r.data : r.message.split('\n');
+  }
+
+  /** Adds a pack file to the room. Returns what is wrong with it, or null when it went in. */
+  async uploadPack(text: string): Promise<string[] | null> {
+    const r = await this.request('uploadPack', { text });
+    return r.ok ? null : r.message.split('\n');
   }
 
   send<K extends keyof ClientMessages>(event: K, payload: ClientMessages[K]): Promise<string | null> {

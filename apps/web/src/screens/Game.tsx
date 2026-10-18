@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { PlayerView, View, Vote, WordView } from '@hot-mic/shared';
+import type { PlayerView, TriviaView, View, Vote, WordView } from '@hot-mic/shared';
 import { client, useAudio } from '../client';
 import { SpeakerPanel, Waveform } from '../sound';
 import { Countdown, TimerBar, useNow } from '../components';
@@ -320,14 +320,64 @@ function HostControls({ word }: { word: WordView }) {
   );
 }
 
-/** Between rounds: scores and boo stats, then everyone taps Ready. */
+/** Between rounds: the trivia question and its answer if trivia is on, then the leaderboard and Ready. */
 function Intermission({ view }: { view: View }) {
+  const im = view.intermission!;
+  if (im.trivia && im.stage !== 'leaderboard') return <Trivia view={view} trivia={im.trivia} revealing={im.stage === 'reveal'} />;
+  return <Leaderboard view={view} />;
+}
+
+function Trivia({ view, trivia, revealing }: { view: View; trivia: TriviaView; revealing: boolean }) {
+  const byId = new Map(view.players.map((p) => [p.id, p]));
+  const answer = (choice: number) => void client.send('triviaAnswer', { questionId: trivia.id, choice });
+  const right = revealing ? (trivia.picks ?? []).filter((p) => p.choice === trivia.correct).map((p) => byId.get(p.playerId)?.name ?? 'Someone') : [];
+  const mineRight = revealing && trivia.mine !== null && trivia.mine === trivia.correct;
+  const waiting = trivia.eligible - trivia.answered.length;
+  return (
+    <section className="trivia">
+      <h2>Round {view.roundNumber} trivia</h2>
+      <p className="question">{trivia.question}</p>
+      <div className="choices">
+        {trivia.choices.map((c, i) => {
+          const state = revealing ? (i === trivia.correct ? 'correct' : i === trivia.mine ? 'wrong' : 'dim') : i === trivia.mine ? 'picked' : '';
+          return (
+            <button key={i} className={`choice ${state}`} disabled={revealing || trivia.mine !== null} onClick={() => answer(i)}>
+              <span className="letter">{'ABCD'[i]}</span> {c}
+            </button>
+          );
+        })}
+      </div>
+      {revealing ? (
+        <>
+          <p className={`verdict ${mineRight ? 'point' : ''}`}>
+            {trivia.mine === null ? "You didn't answer" : mineRight ? 'Correct! +1' : 'Not this time'}
+          </p>
+          <p className="hint">{right.length > 0 ? `Got it: ${right.join(', ')}` : 'Nobody got it'}</p>
+          {trivia.source && <a className="link" href={trivia.source} target="_blank" rel="noreferrer">Check the answer</a>}
+        </>
+      ) : (
+        <p className="hint">
+          {trivia.mine !== null ? 'Locked in. ' : ''}
+          {waiting > 0 ? `Waiting for ${waiting} more` : 'Everyone has answered'}
+        </p>
+      )}
+      {view.you.isHost && (
+        <button className="link" onClick={() => void client.send('hostAction', { action: revealing ? 'forceNext' : 'revealTrivia' })}>
+          {revealing ? 'Skip to the leaderboard' : 'Show the answer now'}
+        </button>
+      )}
+    </section>
+  );
+}
+
+/** Scores and boo stats, then everyone taps Ready. */
+function Leaderboard({ view }: { view: View }) {
   const im = view.intermission!;
   const now = useNow();
   const here = view.players.filter((p) => !p.kicked && p.connected);
   const sorted = [...view.players].filter((p) => !p.kicked || p.score > 0).sort((a, b) => b.score - a.score);
   const waiting = here.filter((p) => !im.ready.includes(p.id));
-  const holding = im.minUntil > now;
+  const holding = im.minUntil !== null && im.minUntil > now;
   return (
     <section className="intermission">
       <h2>Round {view.roundNumber} done</h2>

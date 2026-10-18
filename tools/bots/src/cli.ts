@@ -11,6 +11,7 @@ const { values } = parseArgs({
     create: { type: 'boolean', default: false },
     words: { type: 'string' },
     rounds: { type: 'string' },
+    trivia: { type: 'boolean', default: false },
     speed: { type: 'string', default: '1' },
     help: { type: 'boolean', short: 'h', default: false },
   },
@@ -18,7 +19,7 @@ const { values } = parseArgs({
 
 if (values.help || (!values.room && !values.create)) {
   console.log(`Usage: pnpm bots --room ABCD [--count 3] [--behavior normal] [--household Bots]
-       pnpm bots --create --count 4 --words 5 [--rounds 2]   (bots host and play their own game)
+       pnpm bots --create --count 4 --words 5 [--rounds 3] [--trivia]   (bots host and play their own game)
 
 Behaviors: ${BEHAVIORS.join(', ')}
 Options:   --url http://localhost:3000   --speed 1 (scales all delays; 0.2 is five times faster)`);
@@ -49,7 +50,7 @@ for (const bot of bots.slice(1)) await bot.join(room!, values.household!);
 console.log(`${count} bots (${behavior}) in room ${room}. Ctrl+C to stop.`);
 
 if (values.create && values.words) {
-  await bots[0]!.setConfig({ wordsPerRound: Number(values.words), ...(values.rounds ? { rounds: Number(values.rounds) } : {}) });
+  await bots[0]!.setConfig({ wordsPerRound: Number(values.words), ...(values.rounds ? { rounds: Number(values.rounds) } : {}), trivia: values.trivia });
   await bots[0]!.startGame();
   console.log('Game started');
 }

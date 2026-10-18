@@ -1,4 +1,5 @@
 import type { GameConfig } from './config.js';
+import type { PackKind } from './packs.js';
 
 export type Vote = 'boo' | 'hurray';
 export type Phase = 'lobby' | 'word' | 'intermission' | 'final';
@@ -67,9 +68,32 @@ export interface WordView {
   outcome: OutcomeView | null;
 }
 
+export type IntermissionStage = 'question' | 'reveal' | 'leaderboard';
+
+/** The trivia question between rounds. The right answer stays out of the view until the reveal. */
+export interface TriviaView {
+  id: string;
+  question: string;
+  choices: string[];
+  /** Who has answered, never what. */
+  answered: string[];
+  eligible: number;
+  /** This device's own answer. */
+  mine: number | null;
+  /** Reveal only. */
+  correct: number | null;
+  /** Reveal only: every answer, so the room can see who got it. */
+  picks: { playerId: string; choice: number }[] | null;
+  source: string | null;
+}
+
 export interface IntermissionView {
-  /** Server timestamp before which the next round cannot start. */
-  minUntil: number;
+  stage: IntermissionStage;
+  trivia: TriviaView | null;
+  /** Server timestamp at which the reveal ends. */
+  revealUntil: number | null;
+  /** Leaderboard only: server timestamp before which the next round cannot start. */
+  minUntil: number | null;
   /** Players who have tapped Ready. */
   ready: string[];
 }
@@ -85,7 +109,11 @@ export interface AwardView {
 export interface PackInfo {
   id: string;
   name: string;
-  wordCount: number;
+  kind: PackKind;
+  /** Words or questions, after dropping repeats. */
+  count: number;
+  /** Uploaded to this room rather than built in. */
+  uploaded: boolean;
 }
 
 /** What a device needs to join the room's audio. */
@@ -126,6 +154,8 @@ export interface View {
     isHost: boolean;
     /** Tapped Ready in this intermission. */
     ready: boolean;
+    /** Answered the trivia question in this intermission. */
+    answered: boolean;
     /** This device's own vote on the current attempt. */
     vote: Vote | null;
     canGrab: boolean;
