@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkPack, previewPack } from '../src/index.js';
+import { checkPack, checkThemeFiles, previewPack } from '../src/index.js';
 
 const words = (over: object = {}) => JSON.stringify({ schemaVersion: 1, type: 'words', name: 'Mine', words: [{ text: 'fire' }, { text: 'rain' }], ...over });
 const trivia = (questions: unknown[], over: object = {}) =>
@@ -22,8 +22,7 @@ describe('pack checks name the exact problem', () => {
   });
 
   it('rejects the wrong type, version or name', () => {
-    expect(errors(JSON.stringify({ schemaVersion: 1, name: 'x' }))).toEqual(['"type" must be "words" or "trivia"']);
-    expect(errors(JSON.stringify({ type: 'theme' }))).toEqual(['Theme packs are not supported yet']);
+    expect(errors(JSON.stringify({ schemaVersion: 1, name: 'x' }))).toEqual(['"type" must be "words", "trivia" or "theme"']);
     expect(errors(words({ schemaVersion: 2 }))).toEqual(['"schemaVersion" must be 1']);
     expect(errors(words({ name: '' }))).toEqual(['The pack needs a "name" (up to 60 characters)']);
   });
@@ -71,5 +70,64 @@ describe('pack checks name the exact problem', () => {
     expect(previewPack(w.pack)).toMatchObject({ kind: 'words', count: 40, words: expect.any(Array) });
     expect(previewPack(t.pack)).toMatchObject({ kind: 'trivia', count: 9 });
     expect((previewPack(t.pack) as { questions: unknown[] }).questions).toHaveLength(3);
+  });
+});
+
+describe('theme packs', () => {
+  const theme = (over: object = {}) => JSON.stringify({ schemaVersion: 1, type: 'theme', name: 'Spooky', ...over });
+
+  it('accepts a theme with colors, font, background and sounds', () => {
+    const r = checkPack(
+      theme({
+        words: [{ text: 'ghost' }],
+        style: { colors: { bg: '#101010', primary: '#ffaa00' }, font: 'display', background: 'bg.svg', sounds: { boo: 'sounds/boo.wav' } },
+      }),
+    );
+    expect(r).toMatchObject({ ok: true, pack: { type: 'theme' } });
+    if (!r.ok) return;
+    expect(previewPack(r.pack)).toMatchObject({ kind: 'theme', count: 1, font: 'display', background: true, sounds: ['boo'] });
+  });
+
+  it('names bad colors, fonts and files', () => {
+    expect(errors(theme({ style: { colors: { bg: 'red' } } }))).toEqual(['Color "bg" must look like #1a2b3c']);
+    expect(errors(theme({ style: { colors: { sky: '#000000' } } }))[0]).toMatch(/^Unknown color "sky"\. Colors are bg, panel/);
+    expect(errors(theme({ style: { font: 'Comic Sans' } }))).toEqual(['"font" must be one of: system, serif, rounded, mono, display, handwriting']);
+    expect(errors(theme({ style: { background: '../../etc/passwd' } }))[0]).toMatch(/^"background" must be a file path inside the pack/);
+    expect(errors(theme({ style: { sounds: { applause: 'a.wav' } } }))[0]).toMatch(/^Unknown sound "applause"/);
+  });
+
+  it('refuses custom CSS and scripts', () => {
+    expect(errors(theme({ style: { css: 'body { display: none }' } }))[0]).toMatch(/tokens only.*no custom CSS or code/);
+    expect(errors(theme({ script: 'alert(1)' }))[0]).toMatch(/^Unknown field "script"/);
+  });
+
+  it('keeps text readable', () => {
+    const list = errors(theme({ style: { colors: { bg: '#f4f0ff' } } }));
+    expect(list[0]).toMatch(/^The "text" color on "bg" is hard to read/);
+    expect(errors(theme({ style: { colors: { primary: '#101010' } } }))[0]).toMatch(/dark button text on "primary"/);
+  });
+
+  it('checks a theme against the files that came with it', () => {
+    const r = checkPack(theme({ style: { background: 'bg.png', sounds: { boo: 'boo.wav', grab: 'grab.txt', point: 'point.wav' } } }));
+    if (!r.ok || r.pack.type !== 'theme') throw new Error('bad fixture');
+    const files = new Map([
+      ['bg.png', 2_000_000],
+      ['grab.txt', 10],
+      ['point.wav', 10],
+    ]);
+    expect(checkThemeFiles(r.pack, files)).toEqual([
+      '"background": "bg.png" is larger than 1000 KB',
+      'Sound "grab": "grab.txt" must be .wav, .mp3, .ogg',
+      'Sound "boo" points to "boo.wav", which is not in the pack',
+    ]);
+    expect(checkThemeFiles(r.pack, new Map([['bg.png', 5], ['boo.wav', 5], ['grab.wav', 5], ['grab.txt', 5], ['point.wav', 5]]))).toEqual([
+      'Sound "grab": "grab.txt" must be .wav, .mp3, .ogg',
+    ]);
+  });
+
+  it('flags unconfirmed trivia in the preview', () => {
+    const t = checkPack(trivia([q(), q({ question: 'Hmm?', unconfirmed: true })]));
+    if (!t.ok) throw new Error('bad fixture');
+    expect(previewPack(t.pack)).toMatchObject({ kind: 'trivia', unconfirmed: 1 });
   });
 });

@@ -1,5 +1,5 @@
 import type { GameConfig } from './config.js';
-import type { PackKind } from './packs.js';
+import type { PackKind, ThemeColor, ThemeFont } from './packs.js';
 
 export type Vote = 'boo' | 'hurray';
 export type Phase = 'lobby' | 'word' | 'intermission' | 'final';
@@ -110,8 +110,10 @@ export interface PackInfo {
   id: string;
   name: string;
   kind: PackKind;
-  /** Words or questions, after dropping repeats. */
+  /** Words or questions, after dropping repeats. For a theme, the words it adds. */
   count: number;
+  /** Themes only: the questions it adds. */
+  questions?: number;
   /** Uploaded to this room rather than built in. */
   uploaded: boolean;
 }
@@ -126,6 +128,16 @@ export interface MediaInfo {
 }
 
 export type CueName = 'grab' | 'boo' | 'point' | 'steal' | 'round' | 'final';
+
+/** The look and sounds every device applies, resolved to URLs the server hands out. */
+export interface ThemeView {
+  id: string;
+  name: string;
+  colors: Partial<Record<ThemeColor, string>>;
+  font: ThemeFont;
+  background: string | null;
+  sounds: Partial<Record<CueName, string>>;
+}
 
 export interface DeviceView {
   id: string;
@@ -172,6 +184,8 @@ export interface View {
   word: WordView | null;
   /** Devices that can play audio, filled in by the server. */
   devices: DeviceView[];
+  /** The theme the host picked, filled in by the server. */
+  theme: ThemeView | null;
   /** Lobby only, filled in by the server. */
   packs?: PackInfo[];
   /** Lobby only, filled in by the server: why Start is blocked, if it is. */

@@ -4,7 +4,7 @@ A self-hosted online party game, Pass The Mic meets Kahoot. A word appears, ever
 
 The design doc and the build plan are the source of truth; this README only covers running and developing the code.
 
-**Status: Milestone 5 (trivia and content packs).** A game is the host's chosen rounds, with optional music trivia, an intermission leaderboard and ready-up between them, and awards at the end. Word and trivia packs are plain JSON that the host can add in the lobby. The singer's voice reaches every other household through the app, and a TV can show the game. Without the audio server (see below) the game still runs and can be played over a video call.
+**Status: Milestone 6 (theme packs and the pack generator).** A game is the host's chosen rounds, with optional music trivia, an intermission leaderboard and ready-up between them, and awards at the end. Word, trivia and theme packs are plain JSON (themes with their files) that the host can add in the lobby. The singer's voice reaches every other household through the app, and a TV can show the game. Without the audio server (see below) the game still runs and can be played over a video call.
 
 ## Play it
 
@@ -68,6 +68,30 @@ In the lobby the host can preview any pack, or choose a pack file from their dev
 
 JSON Schemas for editors are in `schemas/`, generated from the same rules the server uses (`pnpm schemas` after changing `packages/shared/src/packs.ts`; a test fails if they are stale). `tools/e2e/trivia.mjs` plays trivia and a pack upload in real browsers, like `rounds.mjs`.
 
+### Theme packs
+
+A theme changes how the game looks and sounds, and can bundle its own words and questions. It is a folder `packs/themes/<id>/` holding `theme.json` and the files it points to (`packs/themes/halloween/` is the built-in example), or the same files zipped with `theme.json` at the top, which the host uploads in the lobby. The host picks a theme (or Plain) in the lobby and every phone and TV applies it.
+
+```json
+{ "schemaVersion": 1, "type": "theme", "name": "Halloween",
+  "words": [{ "text": "ghost" }],
+  "style": { "colors": { "bg": "#0e0a14", "primary": "#ff7a1a" }, "font": "display",
+             "background": "background.svg", "sounds": { "boo": "sounds/boo.wav" } } }
+```
+
+Styles are tokens only, so a theme can't run anything: colors (`bg`, `panel`, `panel2`, `text`, `muted`, `primary`, `accent`, `good`, `bad`; text must stay readable on the backgrounds), a font from a fixed list (`system`, `serif`, `rounded`, `mono`, `display`, `handwriting`), one background image (png, jpg, webp or svg up to 1 MB; an svg with scripts is refused), and sounds that replace the TV's cues (`grab`, `boo`, `point`, `steal`, `round`, `final`; wav, mp3 or ogg up to 300 KB). A zip may hold up to 24 files and 4 MB. No custom CSS or code is accepted, and a theme's words and questions count toward the game while it is picked. `tools/e2e/theme.mjs` checks themes in real browsers.
+
+### Pack generator and checker
+
+`.claude/skills/pack-generator/` is a Claude Code skill that makes packs for you: ask it for "a 90s pop word pack and 20 trivia questions" or "a Christmas theme". It writes lyric-friendly words, trivia with a source link for each question (it opens the source to fact-check the answer, and sets `"unconfirmed": true` on anything it couldn't confirm, which the lobby shows as a warning), and themes, then checks the result.
+
+Check any pack yourself with the same rules the lobby uses:
+
+```sh
+pnpm packs:check packs/music-trivia.json packs/themes/halloween my-theme.zip
+pnpm packs:check --require-sources packs/my-trivia.json   # every question needs a source or "unconfirmed": true
+```
+
 ### Fill a room with bots
 
 Test on one phone by letting scripted bots be the other players:
@@ -87,9 +111,11 @@ apps/server/      Socket.IO handling, rooms, timers, devices and speakers, Media
 apps/web/         phone view and TV screen (Vite + React)
 packages/shared/  types, Zod message schemas, default rules
 packages/engine/  pure game logic: step(state, event, now) → { state, effects }
-packs/            word and trivia packs (plain JSON); the file name is the pack id
+packs/            word and trivia packs (plain JSON; the file name is the pack id) and themes/<id>/ theme packs
 schemas/          JSON Schemas for the pack files, generated
 tools/bots/       scripted bot players
+tools/check-pack.ts  the pack checker behind `pnpm packs:check`
+.claude/skills/pack-generator/  Claude Code skill that generates and checks packs
 tools/e2e/        real-browser audio and TV checks (Playwright + a local LiveKit)
 docker/           compose file and Caddyfile
 ```

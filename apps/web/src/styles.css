@@ -15,7 +15,11 @@ html, body, #root { height: 100%; margin: 0; }
 body {
   background: var(--bg);
   color: var(--text);
-  font: 16px/1.4 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background-image: var(--bg-image, none);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  font: 16px/1.4 var(--font, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif);
   overscroll-behavior: none;
 }
 main { max-width: 480px; margin: 0 auto; padding: 16px 16px 40px; display: flex; flex-direction: column; gap: 16px; min-height: 100%; }
@@ -162,3 +166,7 @@ section { background: var(--panel); border-radius: 16px; padding: 16px; display:
 .choice.correct { border-color: var(--good); background: color-mix(in srgb, var(--good) 22%, var(--panel)); opacity: 1; }
 .choice.wrong { border-color: var(--bad); opacity: 1; }
 .choice.dim { opacity: 0.5; }
+
+.theme-swatches { display: flex; gap: 4px; }
+.theme-swatches i { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--muted); display: inline-block; }
+.pack-warn { color: var(--primary); margin: 0; }

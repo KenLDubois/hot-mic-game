@@ -296,6 +296,7 @@ function onSetConfig(
   if (e.packIds) s.config.packIds = [...e.packIds];
   if (e.trivia !== undefined) s.config.trivia = e.trivia;
   if (e.triviaPackIds) s.config.triviaPackIds = [...e.triviaPackIds];
+  if (e.themeId !== undefined) s.config.themeId = e.themeId;
 }
 
 function onStart(

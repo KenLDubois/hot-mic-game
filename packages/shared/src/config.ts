@@ -56,6 +56,8 @@ export interface GameConfig {
   /** One music question for everyone between rounds. */
   trivia: boolean;
   triviaPackIds: string[];
+  /** A theme pack's id: its look, sounds, words and questions. Null for the plain game. */
+  themeId: string | null;
 }
 
 export const DEFAULT_GAME_CONFIG: GameConfig = {
@@ -64,6 +66,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
   packIds: ['starter'],
   trivia: false,
   triviaPackIds: ['music-trivia'],
+  themeId: null,
 };
 
 export const LIMITS = {

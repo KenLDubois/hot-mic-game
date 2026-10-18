@@ -110,6 +110,7 @@ export function viewFor(s: GameState, playerId: string, now: number, roomCode: s
     awards: s.phase === 'final' ? awards(s) : [],
     // The server fills these in; devices and media are not game rules.
     devices: [],
+    theme: null,
     word,
   };
 }

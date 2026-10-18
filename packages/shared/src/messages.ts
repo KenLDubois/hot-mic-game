@@ -39,6 +39,7 @@ export const setConfigSchema = z.object({
   packIds: z.array(id).min(1).max(20).optional(),
   trivia: z.boolean().optional(),
   triviaPackIds: z.array(id).min(1).max(20).optional(),
+  themeId: id.nullable().optional(),
 });
 
 export const startGameSchema = z.object({}).strict();
@@ -48,8 +49,14 @@ export const voteSchema = z.object({ attemptId: id, vote: z.enum(['boo', 'hurray
 export const readySchema = z.object({}).strict();
 export const triviaAnswerSchema = z.object({ questionId: id, choice: z.number().int().min(0).max(3) });
 /** Check a pack file (text) or look at one already in the room (id), without adding anything. */
-export const previewPackSchema = z.union([z.object({ text: z.string().max(400_000) }), z.object({ packId: id })]);
-export const uploadPackSchema = z.object({ text: z.string().max(400_000) });
+const zipBytes = z.custom<Uint8Array>((v) => v instanceof Uint8Array && v.byteLength <= 4_500_000, 'must be a zip file up to 4 MB');
+export const previewPackSchema = z.union([
+  z.object({ text: z.string().max(400_000) }),
+  z.object({ data: zipBytes }),
+  z.object({ packId: id }),
+]);
+/** A pack file as text (.json), or a theme as zip bytes. */
+export const uploadPackSchema = z.union([z.object({ text: z.string().max(400_000) }), z.object({ data: zipBytes })]);
 
 export const hostActionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('skipWord') }),

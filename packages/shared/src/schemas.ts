@@ -1,5 +1,5 @@
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import { triviaPackSchema, wordPackSchema } from './packs.js';
+import { themePackSchema, triviaPackSchema, wordPackSchema } from './packs.js';
 
 /**
  * JSON Schemas for the pack files, generated from the Zod schemas the server checks uploads with.
@@ -15,5 +15,6 @@ export function packJsonSchemas(): Record<string, object> {
   return {
     'word-pack.schema.json': make('Hot Mic word pack', wordPackSchema),
     'trivia-pack.schema.json': make('Hot Mic trivia pack', triviaPackSchema),
+    'theme-pack.schema.json': make('Hot Mic theme pack (theme.json inside the zip)', themePackSchema),
   };
 }

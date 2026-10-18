@@ -4,16 +4,24 @@ import { createGame, nextDeadline, step, viewFor } from '@hot-mic/engine';
 import type { Effect, GameEvent, GameState } from '@hot-mic/engine';
 import {
   LIMITS,
+  THEME_CUES,
   checkPack,
+  checkThemeFiles,
   previewPack,
   type DeviceView,
+  type Pack,
   type PackPreview,
   type Rules,
   type ServerEvents,
+  type ThemeView,
   type View,
 } from '@hot-mic/shared';
 import type { DevicePermissions, MediaAdapter } from './media.js';
 import { availableQuestions, availableWords, packInfo, type LoadedPack } from './packs.js';
+import { readThemeZip, type ThemeAsset } from './themes.js';
+
+/** A pack file as text, a theme as zip bytes, or a pack already in the room. */
+export type PackInput = { text: string } | { data: Uint8Array } | { packId: string };
 
 type GameSocket = Socket<Record<string, never>, ServerEvents>;
 
@@ -100,30 +108,54 @@ export class Room {
     return [...this.deps.packs, ...this.uploaded];
   }
 
+  /** Word and trivia pack ids plus the picked theme, whose bundled words and questions join the pools. */
+  poolIds(ids: string[]): string[] {
+    const theme = this.game.config.themeId;
+    return theme ? [...ids, theme] : ids;
+  }
+
+  /** A file of a theme in this room, for the asset route. */
+  themeAsset(id: string, path: string): ThemeAsset | undefined {
+    return this.uploaded.find((p) => p.id === id)?.assets?.get(path);
+  }
+
   /** Check a pack file, or one already here, and show what is in it. Nothing is added. */
-  previewPack(msg: { text: string } | { packId: string }): { ok: true; preview: PackPreview } | { ok: false; errors: string[] } {
+  previewPack(msg: PackInput): { ok: true; preview: PackPreview } | { ok: false; errors: string[] } {
     if ('packId' in msg) {
       const found = this.allPacks().find((p) => p.id === msg.packId);
       return found ? { ok: true, preview: previewPack(found.pack) } : { ok: false, errors: ['That pack is not in this room'] };
     }
+    const loaded = this.readPack(msg);
+    return loaded.ok ? { ok: true, preview: previewPack(loaded.pack) } : loaded;
+  }
+
+  private readPack(msg: { text: string } | { data: Uint8Array }): { ok: true; pack: Pack; assets?: Map<string, ThemeAsset> } | { ok: false; errors: string[] } {
+    if ('data' in msg) return readThemeZip(msg.data);
     const checked = checkPack(msg.text);
-    return checked.ok ? { ok: true, preview: previewPack(checked.pack) } : checked;
+    if (!checked.ok) return checked;
+    // A bare theme.json has no files with it, so it cannot point to any.
+    if (checked.pack.type === 'theme') {
+      const errors = checkThemeFiles(checked.pack, new Map());
+      if (errors.length) return { ok: false, errors: [...errors, 'Upload a .zip with theme.json and these files inside it'] };
+    }
+    return checked;
   }
 
   /** Adds a checked pack to this room and selects it for its kind. Returns what went wrong, if anything. */
-  uploadPack(hostId: string, text: string): { ok: true; id: string; preview: PackPreview } | { ok: false; errors: string[] } {
+  uploadPack(hostId: string, msg: { text: string } | { data: Uint8Array }): { ok: true; id: string; preview: PackPreview } | { ok: false; errors: string[] } {
     if (this.game.phase !== 'lobby') return { ok: false, errors: ['Packs can only be added in the lobby'] };
     if (this.uploaded.length >= LIMITS.maxUploadedPacks) {
       return { ok: false, errors: [`A room can have up to ${LIMITS.maxUploadedPacks} uploaded packs`] };
     }
-    const checked = checkPack(text);
-    if (!checked.ok) return checked;
+    const loaded = this.readPack(msg);
+    if (!loaded.ok) return loaded;
     const id = `upload-${++this.uploadSeq}`;
-    this.uploaded.push({ id, pack: checked.pack, uploaded: true });
+    this.uploaded.push({ id, pack: loaded.pack, uploaded: true, assets: loaded.assets });
     const c = this.game.config;
-    if (checked.pack.type === 'words') this.dispatch({ type: 'setConfig', playerId: hostId, packIds: [...c.packIds, id] });
-    else this.dispatch({ type: 'setConfig', playerId: hostId, triviaPackIds: [...c.triviaPackIds, id] });
-    return { ok: true, id, preview: previewPack(checked.pack) };
+    if (loaded.pack.type === 'words') this.dispatch({ type: 'setConfig', playerId: hostId, packIds: [...c.packIds, id] });
+    else if (loaded.pack.type === 'trivia') this.dispatch({ type: 'setConfig', playerId: hostId, triviaPackIds: [...c.triviaPackIds, id] });
+    else this.dispatch({ type: 'setConfig', playerId: hostId, themeId: id });
+    return { ok: true, id, preview: previewPack(loaded.pack) };
   }
 
   /** Add a brand-new player and return their token. */
@@ -392,11 +424,28 @@ export class Room {
   viewFor(playerId: string): View {
     const view = viewFor(this.game, playerId, this.deps.now(), this.code);
     view.devices = this.deviceViews();
+    view.theme = this.themeView();
     if (this.game.phase === 'lobby') {
       view.packs = packInfo(this.allPacks());
       view.startBlocked = this.startBlocked();
     }
     return view;
+  }
+
+  /** The picked theme, with its files as URLs the server hands out. */
+  private themeView(): ThemeView | null {
+    const found = this.allPacks().find((p) => p.id === this.game.config.themeId);
+    if (!found || found.pack.type !== 'theme') return null;
+    const style = found.pack.style ?? {};
+    const url = (path: string) => `/theme-assets/${found.uploaded ? this.code : 'builtin'}/${found.id}/${path}`;
+    return {
+      id: found.id,
+      name: found.pack.name,
+      colors: style.colors ?? {},
+      font: style.font ?? 'system',
+      background: style.background ? url(style.background) : null,
+      sounds: Object.fromEntries(THEME_CUES.flatMap((cue) => (style.sounds?.[cue] ? [[cue, url(style.sounds[cue]!)]] : []))),
+    };
   }
 
   /** Why Start is blocked right now, if it is. */
@@ -405,11 +454,11 @@ export class Room {
     const present = Object.values(g.players).filter((p) => p.connected && !p.kicked).length;
     if (present < g.rules.minPlayers) return `Need at least ${g.rules.minPlayers} players`;
     const need = g.config.rounds * g.config.wordsPerRound;
-    const have = availableWords(this.allPacks(), g.config.packIds);
+    const have = availableWords(this.allPacks(), this.poolIds(g.config.packIds));
     if (have < need) return `The chosen packs are ${need - have} words short for ${need} words`;
     // One question for each intermission; there is none after the last round.
     const questions = g.config.trivia ? g.config.rounds - 1 : 0;
-    const haveQuestions = availableQuestions(this.allPacks(), g.config.triviaPackIds);
+    const haveQuestions = availableQuestions(this.allPacks(), this.poolIds(g.config.triviaPackIds));
     if (haveQuestions < questions) {
       return `The trivia packs are ${questions - haveQuestions} questions short for ${questions} questions`;
     }
