@@ -1,0 +1,524 @@
+{
+  "schemaVersion": 1,
+  "type": "trivia",
+  "name": "Music trivia",
+  "questions": [
+    {
+      "question": "Which artist released the 1982 album Thriller?",
+      "choices": [
+        "Prince",
+        "Michael Jackson",
+        "Madonna",
+        "Lionel Richie"
+      ],
+      "answer": 1,
+      "source": "https://en.wikipedia.org/wiki/Thriller_(album)"
+    },
+    {
+      "question": "Which band recorded Bohemian Rhapsody?",
+      "choices": [
+        "Led Zeppelin",
+        "Pink Floyd",
+        "The Who",
+        "Queen"
+      ],
+      "answer": 3,
+      "source": "https://en.wikipedia.org/wiki/Bohemian_Rhapsody"
+    },
+    {
+      "question": "Which band released the album Synchronicity?",
+      "choices": [
+        "The Police",
+        "Duran Duran",
+        "Tears for Fears",
+        "INXS"
+      ],
+      "answer": 0,
+      "source": "https://en.wikipedia.org/wiki/Synchronicity_(The_Police_album)"
+    },
+    {
+      "question": "Who wrote and first recorded the song Hallelujah in 1984?",
+      "choices": [
+        "Jeff Buckley",
+        "Leonard Cohen",
+        "Bob Dylan",
+        "Rufus Wainwright"
+      ],
+      "answer": 1,
+      "source": "https://en.wikipedia.org/wiki/Hallelujah_(Leonard_Cohen_song)"
+    },
+    {
+      "question": "Which Beatles album has the band walking across a zebra crossing on its cover?",
+      "choices": [
+        "Revolver",
+        "Help!",
+        "Let It Be",
+        "Abbey Road"
+      ],
+      "answer": 3,
+      "source": "https://en.wikipedia.org/wiki/Abbey_Road"
+    },
+    {
+      "question": "Purple Rain is a 1984 album by which artist?",
+      "choices": [
+        "Stevie Wonder",
+        "David Bowie",
+        "Prince",
+        "Michael Jackson"
+      ],
+      "answer": 2,
+      "source": "https://en.wikipedia.org/wiki/Purple_Rain_(album)"
+    },
+    {
+      "question": "Which singer is known as the Queen of Soul?",
+      "choices": [
+        "Diana Ross",
+        "Aretha Franklin",
+        "Whitney Houston",
+        "Tina Turner"
+      ],
+      "answer": 1,
+      "source": "https://en.wikipedia.org/wiki/Aretha_Franklin"
+    },
+    {
+      "question": "Which band made the 1977 album Rumours?",
+      "choices": [
+        "Eagles",
+        "ABBA",
+        "Fleetwood Mac",
+        "Boston"
+      ],
+      "answer": 2,
+      "source": "https://en.wikipedia.org/wiki/Rumours_(Fleetwood_Mac_album)"
+    },
+    {
+      "question": "Which country were the members of ABBA from?",
+      "choices": [
+        "Norway",
+        "Sweden",
+        "Denmark",
+        "Finland"
+      ],
+      "answer": 1,
+      "source": "https://en.wikipedia.org/wiki/ABBA"
+    },
+    {
+      "question": "Which singer released the 2011 album 21?",
+      "choices": [
+        "Adele",
+        "Amy Winehouse",
+        "Lady Gaga",
+        "Rihanna"
+      ],
+      "answer": 0,
+      "source": "https://en.wikipedia.org/wiki/21_(Adele_album)"
+    },
+    {
+      "question": "Which singer released the 2006 album Back to Black?",
+      "choices": [
+        "Duffy",
+        "Lily Allen",
+        "Adele",
+        "Amy Winehouse"
+      ],
+      "answer": 3,
+      "source": "https://en.wikipedia.org/wiki/Back_to_Black"
+    },
+    {
+      "question": "Who sang Like a Prayer in 1989?",
+      "choices": [
+        "Cyndi Lauper",
+        "Madonna",
+        "Janet Jackson",
+        "Whitney Houston"
+      ],
+      "answer": 1,
+      "source": "https://en.wikipedia.org/wiki/Like_a_Prayer_(song)"
+    },
+    {
+      "question": "Which band is fronted by Bono?",
+      "choices": [
+        "U2",
+        "Coldplay",
+        "INXS",
+        "Simple Minds"
+      ],
+      "answer": 0,
+      "source": "https://en.wikipedia.org/wiki/U2"
+    },
+    {
+      "question": "Which Pink Floyd album shows a prism splitting light on its cover?",
+      "choices": [
+        "The Wall",
+        "Wish You Were Here",
+        "The Dark Side of the Moon",
+        "Animals"
+      ],
+      "answer": 2,
+      "source": "https://en.wikipedia.org/wiki/The_Dark_Side_of_the_Moon"
+    },
+    {
+      "question": "Which Nirvana album contains Smells Like Teen Spirit?",
+      "choices": [
+        "In Utero",
+        "Nevermind",
+        "Bleach",
+        "Incesticide"
+      ],
+      "answer": 1,
+      "source": "https://en.wikipedia.org/wiki/Nevermind"
+    },
+    {
+      "question": "In which city was Motown Records founded?",
+      "choices": [
+        "Memphis",
+        "Chicago",
+        "Philadelphia",
+        "Detroit"
+      ],
+      "answer": 3,
+      "source": "https://en.wikipedia.org/wiki/Motown"
+    },
+    {
+      "question": "Which rapper released The Marshall Mathers LP?",
+      "choices": [
+        "Eminem",
+        "Jay-Z",
+        "Nas",
+        "Dr. Dre"
+      ],
+      "answer": 0,
+      "source": "https://en.wikipedia.org/wiki/The_Marshall_Mathers_LP"
+    },
+    {
+      "question": "Which pop star was born Stefani Joanne Angelina Germanotta?",
+      "choices": [
+        "Katy Perry",
+        "Lady Gaga",
+        "Pink",
+        "Kesha"
+      ],
+      "answer": 1,
+      "source": "https://en.wikipedia.org/wiki/Lady_Gaga"
+    },
+    {
+      "question": "Which singer had a 2010 hit with Rolling in the Deep?",
+      "choices": [
+        "Adele",
+        "Beyoncé",
+        "Florence Welch",
+        "Duffy"
+      ],
+      "answer": 0,
+      "source": "https://en.wikipedia.org/wiki/Rolling_in_the_Deep"
+    },
+    {
+      "question": "Which band had a 1991 hit with Losing My Religion?",
+      "choices": [
+        "The Cure",
+        "R.E.M.",
+        "Pearl Jam",
+        "Radiohead"
+      ],
+      "answer": 1,
+      "source": "https://en.wikipedia.org/wiki/Losing_My_Religion"
+    },
+    {
+      "question": "Which Beatle wrote Here Comes the Sun?",
+      "choices": [
+        "John Lennon",
+        "Paul McCartney",
+        "George Harrison",
+        "Ringo Starr"
+      ],
+      "answer": 2,
+      "source": "https://en.wikipedia.org/wiki/Here_Comes_the_Sun"
+    },
+    {
+      "question": "Which artist created the stage persona Ziggy Stardust?",
+      "choices": [
+        "Elton John",
+        "David Bowie",
+        "Marc Bolan",
+        "Freddie Mercury"
+      ],
+      "answer": 1,
+      "source": "https://en.wikipedia.org/wiki/David_Bowie"
+    },
+    {
+      "question": "Which group had a 1996 hit with Wannabe?",
+      "choices": [
+        "All Saints",
+        "TLC",
+        "Destiny's Child",
+        "Spice Girls"
+      ],
+      "answer": 3,
+      "source": "https://en.wikipedia.org/wiki/Wannabe"
+    },
+    {
+      "question": "Which country is the singer Shakira from?",
+      "choices": [
+        "Mexico",
+        "Colombia",
+        "Spain",
+        "Argentina"
+      ],
+      "answer": 1,
+      "source": "https://en.wikipedia.org/wiki/Shakira"
+    },
+    {
+      "question": "Which band recorded Smoke on the Water?",
+      "choices": [
+        "Black Sabbath",
+        "Deep Purple",
+        "Uriah Heep",
+        "Rainbow"
+      ],
+      "answer": 1,
+      "source": "https://en.wikipedia.org/wiki/Smoke_on_the_Water"
+    },
+    {
+      "question": "At Motown 25 in 1983, Michael Jackson first showed the moonwalk while performing which song?",
+      "choices": [
+        "Beat It",
+        "Thriller",
+        "Billie Jean",
+        "Bad"
+      ],
+      "answer": 2,
+      "source": "https://en.wikipedia.org/wiki/Billie_Jean"
+    },
+    {
+      "question": "Where was Freddie Mercury born?",
+      "choices": [
+        "London",
+        "Zanzibar",
+        "Mumbai",
+        "Cairo"
+      ],
+      "answer": 1,
+      "source": "https://en.wikipedia.org/wiki/Freddie_Mercury"
+    },
+    {
+      "question": "Which band recorded Hotel California?",
+      "choices": [
+        "Doobie Brothers",
+        "Steely Dan",
+        "Chicago",
+        "Eagles"
+      ],
+      "answer": 3,
+      "source": "https://en.wikipedia.org/wiki/Hotel_California"
+    },
+    {
+      "question": "Who wrote and recorded the song Imagine?",
+      "choices": [
+        "Paul McCartney",
+        "John Lennon",
+        "George Harrison",
+        "Harry Nilsson"
+      ],
+      "answer": 1,
+      "source": "https://en.wikipedia.org/wiki/Imagine_(John_Lennon_song)"
+    },
+    {
+      "question": "Which Taylor Swift album was released in 2014?",
+      "choices": [
+        "Red",
+        "Reputation",
+        "Fearless",
+        "1989"
+      ],
+      "answer": 3,
+      "source": "https://en.wikipedia.org/wiki/1989_(Taylor_Swift_album)"
+    },
+    {
+      "question": "Beyoncé first became famous as a member of which group?",
+      "choices": [
+        "TLC",
+        "En Vogue",
+        "Destiny's Child",
+        "Wilson Phillips"
+      ],
+      "answer": 2,
+      "source": "https://en.wikipedia.org/wiki/Destiny's_Child"
+    },
+    {
+      "question": "Which Jamaican singer is best known for No Woman, No Cry?",
+      "choices": [
+        "Peter Tosh",
+        "Jimmy Cliff",
+        "Bob Marley",
+        "Toots Hibbert"
+      ],
+      "answer": 2,
+      "source": "https://en.wikipedia.org/wiki/No_Woman,_No_Cry"
+    },
+    {
+      "question": "Which singer is nicknamed The Boss?",
+      "choices": [
+        "Bruce Springsteen",
+        "Billy Joel",
+        "Jon Bon Jovi",
+        "Tom Petty"
+      ],
+      "answer": 0,
+      "source": "https://en.wikipedia.org/wiki/Bruce_Springsteen"
+    },
+    {
+      "question": "Which band recorded Don't Stop Believin'?",
+      "choices": [
+        "Foreigner",
+        "Journey",
+        "Toto",
+        "Boston"
+      ],
+      "answer": 1,
+      "source": "https://en.wikipedia.org/wiki/Don't_Stop_Believin'"
+    },
+    {
+      "question": "Which producer and songwriter, Billie Eilish's brother, co-wrote her early hits?",
+      "choices": [
+        "Jack Antonoff",
+        "Max Martin",
+        "Finneas O'Connell",
+        "Pharrell Williams"
+      ],
+      "answer": 2,
+      "source": "https://en.wikipedia.org/wiki/Finneas_O'Connell"
+    },
+    {
+      "question": "Who is the lead singer of The Rolling Stones?",
+      "choices": [
+        "Keith Richards",
+        "Mick Jagger",
+        "Rod Stewart",
+        "Steven Tyler"
+      ],
+      "answer": 1,
+      "source": "https://en.wikipedia.org/wiki/The_Rolling_Stones"
+    },
+    {
+      "question": "Which country is the electronic duo Daft Punk from?",
+      "choices": [
+        "Germany",
+        "France",
+        "Belgium",
+        "United Kingdom"
+      ],
+      "answer": 1,
+      "source": "https://en.wikipedia.org/wiki/Daft_Punk"
+    },
+    {
+      "question": "Which South Korean artist had a worldwide hit with Gangnam Style?",
+      "choices": [
+        "BTS",
+        "Rain",
+        "Psy",
+        "G-Dragon"
+      ],
+      "answer": 2,
+      "source": "https://en.wikipedia.org/wiki/Gangnam_Style"
+    },
+    {
+      "question": "Which band recorded Wonderwall?",
+      "choices": [
+        "Blur",
+        "Pulp",
+        "Suede",
+        "Oasis"
+      ],
+      "answer": 3,
+      "source": "https://en.wikipedia.org/wiki/Wonderwall_(song)"
+    },
+    {
+      "question": "Which instrument did Louis Armstrong famously play?",
+      "choices": [
+        "Trumpet",
+        "Saxophone",
+        "Clarinet",
+        "Trombone"
+      ],
+      "answer": 0,
+      "source": "https://en.wikipedia.org/wiki/Louis_Armstrong"
+    },
+    {
+      "question": "Which composer wrote The Four Seasons?",
+      "choices": [
+        "Bach",
+        "Vivaldi",
+        "Mozart",
+        "Handel"
+      ],
+      "answer": 1,
+      "source": "https://en.wikipedia.org/wiki/The_Four_Seasons_(Vivaldi)"
+    },
+    {
+      "question": "Which composer kept writing music after going deaf, including his Ninth Symphony?",
+      "choices": [
+        "Brahms",
+        "Schubert",
+        "Haydn",
+        "Beethoven"
+      ],
+      "answer": 3,
+      "source": "https://en.wikipedia.org/wiki/Symphony_No._9_(Beethoven)"
+    },
+    {
+      "question": "How many strings does a standard violin have?",
+      "choices": [
+        "Four",
+        "Five",
+        "Six",
+        "Eight"
+      ],
+      "answer": 0,
+      "source": "https://en.wikipedia.org/wiki/Violin"
+    },
+    {
+      "question": "How many strings does a standard guitar have?",
+      "choices": [
+        "Four",
+        "Five",
+        "Six",
+        "Seven"
+      ],
+      "answer": 2,
+      "source": "https://en.wikipedia.org/wiki/Guitar"
+    },
+    {
+      "question": "Who had the 1992 hit version of I Will Always Love You from the film The Bodyguard?",
+      "choices": [
+        "Mariah Carey",
+        "Whitney Houston",
+        "Celine Dion",
+        "Toni Braxton"
+      ],
+      "answer": 1,
+      "source": "https://en.wikipedia.org/wiki/I_Will_Always_Love_You"
+    },
+    {
+      "question": "Which 1969 music festival took place on a farm in Bethel, New York?",
+      "choices": [
+        "Monterey Pop",
+        "Altamont",
+        "Isle of Wight",
+        "Woodstock"
+      ],
+      "answer": 3,
+      "source": "https://en.wikipedia.org/wiki/Woodstock"
+    },
+    {
+      "question": "Which band recorded Stairway to Heaven?",
+      "choices": [
+        "Led Zeppelin",
+        "Deep Purple",
+        "Yes",
+        "Genesis"
+      ],
+      "answer": 0,
+      "source": "https://en.wikipedia.org/wiki/Stairway_to_Heaven"
+    }
+  ]
+}

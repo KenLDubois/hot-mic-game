@@ -18,6 +18,7 @@ const FAST = {
   resultHoldMs: 100,
   doneHoldMs: 100,
   intermissionMinMs: 300,
+  triviaRevealMs: 200,
 };
 
 let server: ReturnType<typeof createGameServer>;
@@ -154,4 +155,67 @@ describe('a full game with bots', () => {
     expect(v.totalRounds).toBe(2);
     expect(v.totalWords).toBe(4);
   }, 30_000);
+
+  it('asks trivia between rounds and bots answer it', async () => {
+    const host = new Bot({ url, name: 'Host', behavior: 'always-grab', speed: 0.04 });
+    const other = new Bot({ url, name: 'B1', behavior: 'normal', speed: 0.04 });
+    bots.push(host, other);
+    const session = await host.create('Home');
+    await other.join(session.roomCode, 'Away');
+    const observer = client();
+    await ask(observer, 'join', { roomCode: session.roomCode, name: 'Watcher', householdName: 'Away' });
+    const stages: string[] = [];
+    observer.on('view', (v: View) => {
+      const im = v.intermission;
+      if (im && stages.at(-1) !== im.stage) stages.push(im.stage);
+      if (im?.stage === 'question' && !v.you.answered) void ask(observer, 'triviaAnswer', { questionId: im.trivia!.id, choice: 0 });
+      if (im?.stage === 'leaderboard' && !v.you.ready) void ask(observer, 'ready');
+    });
+    const final = nextView(observer, (v) => v.phase === 'final');
+    await host.setConfig({ rounds: 2, wordsPerRound: 2, trivia: true });
+    await host.startGame();
+    const v = await final;
+    expect(stages).toEqual(['question', 'reveal', 'leaderboard']);
+    expect(v.totalRounds).toBe(2);
+  }, 30_000);
+
+  it('checks and previews packs, and adds an uploaded pack only for the host', async () => {
+    const host = client();
+    const created = (await ask<SessionInfo>(host, 'createRoom', { name: 'Ken', householdName: 'Home' })) as { data: SessionInfo };
+    const guest = client();
+    await ask(guest, 'join', { roomCode: created.data.roomCode, name: 'Ana', householdId: 'h1' });
+    const pack = JSON.stringify({ schemaVersion: 1, type: 'trivia', name: 'Mine', questions: [{ question: 'Q?', choices: ['a', 'b'], answer: 1 }] });
+    const bad = JSON.stringify({ schemaVersion: 1, type: 'trivia', name: 'Bad', questions: [{ question: 'Q?', choices: ['a', 'b'] }] });
+
+    expect(await ask(guest, 'uploadPack', { text: pack })).toMatchObject({ ok: false, code: 'not-host' });
+    expect(await ask(host, 'previewPack', { text: bad })).toMatchObject({
+      ok: false,
+      code: 'bad-pack',
+      message: expect.stringContaining('Question 1 has no correct answer'),
+    });
+    expect(await ask(host, 'previewPack', { text: pack })).toMatchObject({ ok: true, data: { kind: 'trivia', count: 1 } });
+    expect(await ask(host, 'previewPack', { packId: 'starter' })).toMatchObject({ ok: true, data: { kind: 'words' } });
+    expect(await ask(host, 'previewPack', { packId: 'nope' })).toMatchObject({ ok: false });
+
+    const withPack = nextView(host, (v) => !!v.packs?.some((p) => p.uploaded));
+    expect(await ask(host, 'uploadPack', { text: pack })).toMatchObject({ ok: true, data: { id: 'upload-1' } });
+    const v = await withPack;
+    expect(v.packs?.find((p) => p.id === 'upload-1')).toMatchObject({ kind: 'trivia', count: 1, uploaded: true });
+    expect(v.config.triviaPackIds).toContain('upload-1');
+    expect(v.packs?.some((p) => p.id === 'music-trivia' && p.kind === 'trivia' && p.count > 40)).toBe(true);
+  });
+
+  it('blocks Start when the trivia packs are too small', async () => {
+    const host = client();
+    const created = (await ask<SessionInfo>(host, 'createRoom', { name: 'Ken', householdName: 'Home' })) as { data: SessionInfo };
+    const guest = client();
+    await ask(guest, 'join', { roomCode: created.data.roomCode, name: 'Ana', householdId: 'h1' });
+    const blocked = nextView(host, (v) => !!v.startBlocked?.includes('trivia'));
+    await ask(host, 'setConfig', { rounds: 10, wordsPerRound: 1, trivia: true, triviaPackIds: ['missing'] });
+    expect((await blocked).startBlocked).toBe('The trivia packs are 9 questions short for 9 questions');
+    // One round never has an intermission, so it needs no questions.
+    const ok = nextView(host, (v) => v.startBlocked === null);
+    await ask(host, 'setConfig', { rounds: 1 });
+    await ok;
+  });
 });

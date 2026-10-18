@@ -115,8 +115,20 @@ export class Bot {
   }
 
   private react(v: View) {
-    if (v.phase === 'intermission' && !v.you.ready && this.opts.behavior !== 'never-vote') {
-      this.once(`ready:${v.roundNumber}`, () => this.later(between(1000, 6000), () => this.socket.emit('ready', {})));
+    if (v.phase === 'intermission' && this.opts.behavior !== 'never-vote') {
+      const im = v.intermission!;
+      const t = im.trivia;
+      if (im.stage === 'question' && t && !v.you.answered) {
+        this.once(`trivia:${t.id}`, () =>
+          this.later(between(800, 4000), () => {
+            this.log('answering the trivia question');
+            this.socket.emit('triviaAnswer', { questionId: t.id, choice: Math.floor(Math.random() * t.choices.length) });
+          }),
+        );
+      }
+      if (im.stage === 'leaderboard' && !v.you.ready) {
+        this.once(`ready:${v.roundNumber}`, () => this.later(between(1000, 6000), () => this.socket.emit('ready', {})));
+      }
       return;
     }
     const w = v.word;

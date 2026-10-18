@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import qrcode from 'qrcode-generator';
-import type { PlayerView, RoomInfo, View, Vote, WordView } from '@hot-mic/shared';
+import type { PlayerView, RoomInfo, TriviaView, View, Vote, WordView } from '@hot-mic/shared';
 import { client, useAudio, useClient } from '../client';
 import { Countdown, TimerBar } from '../components';
 import { playCue } from '../sfx';
@@ -342,6 +342,47 @@ function TvWord({ view, word, byId }: { view: View; word: WordView; byId: Map<st
 
 function TvIntermission({ view }: { view: View }) {
   const im = view.intermission!;
+  if (im.trivia && im.stage !== 'leaderboard') return <TvTrivia view={view} trivia={im.trivia} revealing={im.stage === 'reveal'} />;
+  return <TvLeaderboard view={view} />;
+}
+
+function TvTrivia({ view, trivia, revealing }: { view: View; trivia: TriviaView; revealing: boolean }) {
+  const players = view.players.filter((p) => !p.kicked);
+  const name = (id: string) => view.players.find((p) => p.id === id)?.name ?? 'Someone';
+  const pickedBy = (i: number) => (trivia.picks ?? []).filter((p) => p.choice === i).map((p) => name(p.playerId));
+  return (
+    <div className="tv-trivia">
+      <div className="tv-label">Round {view.roundNumber} trivia</div>
+      <div className="tv-question">{trivia.question}</div>
+      <div className="tv-choices">
+        {trivia.choices.map((c, i) => (
+          <div key={i} className={`tv-choice ${revealing ? (i === trivia.correct ? 'correct' : 'dim') : ''}`}>
+            <span className="tv-letter">{'ABCD'[i]}</span>
+            <span className="tv-choice-text">{c}</span>
+            {revealing && pickedBy(i).length > 0 && <span className="tv-picks">{pickedBy(i).join(', ')}</span>}
+          </div>
+        ))}
+      </div>
+      {revealing ? (
+        <p className="tv-hint">
+          {(trivia.picks ?? []).filter((p) => p.choice === trivia.correct).length === 0 ? 'Nobody got it' : 'Correct answers score 1 point'}
+        </p>
+      ) : (
+        <div className="tv-answered">
+          {players.map((p) => (
+            <span key={p.id} className={`tv-who ${trivia.answered.includes(p.id) ? 'done' : ''} ${p.connected ? '' : 'away'}`}>
+              {trivia.answered.includes(p.id) ? '✓ ' : ''}
+              {p.name}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TvLeaderboard({ view }: { view: View }) {
+  const im = view.intermission!;
   const sorted = [...view.players].filter((p) => !p.kicked || p.score > 0).sort((a, b) => b.score - a.score);
   const waiting = view.players.filter((p) => !p.kicked && p.connected && !im.ready.includes(p.id));
   return (
@@ -372,7 +413,7 @@ function TvIntermission({ view }: { view: View }) {
       </table>
       <p className="tv-hint">
         {waiting.length > 0 ? `Tap Ready on your phone · waiting for ${waiting.map((p) => p.name).join(', ')}` : 'Everyone is ready'}
-        {im.minUntil > client.serverNow() && (
+        {im.minUntil !== null && im.minUntil > client.serverNow() && (
           <>
             {' · '}next round in at least <Countdown deadline={im.minUntil} /> s
           </>

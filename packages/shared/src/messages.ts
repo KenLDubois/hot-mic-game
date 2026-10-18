@@ -37,6 +37,8 @@ export const setConfigSchema = z.object({
   rounds: z.number().int().min(1).max(LIMITS.maxRounds).optional(),
   wordsPerRound: z.number().int().min(1).max(LIMITS.maxWordsPerRound).optional(),
   packIds: z.array(id).min(1).max(20).optional(),
+  trivia: z.boolean().optional(),
+  triviaPackIds: z.array(id).min(1).max(20).optional(),
 });
 
 export const startGameSchema = z.object({}).strict();
@@ -44,10 +46,15 @@ export const grabSchema = z.object({ wordId: id });
 export const micSchema = z.object({ attemptId: id });
 export const voteSchema = z.object({ attemptId: id, vote: z.enum(['boo', 'hurray']) });
 export const readySchema = z.object({}).strict();
+export const triviaAnswerSchema = z.object({ questionId: id, choice: z.number().int().min(0).max(3) });
+/** Check a pack file (text) or look at one already in the room (id), without adding anything. */
+export const previewPackSchema = z.union([z.object({ text: z.string().max(400_000) }), z.object({ packId: id })]);
+export const uploadPackSchema = z.object({ text: z.string().max(400_000) });
 
 export const hostActionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('skipWord') }),
   z.object({ action: z.literal('forceNext') }),
+  z.object({ action: z.literal('revealTrivia') }),
   z.object({ action: z.literal('newGame') }),
   z.object({ action: z.literal('kick'), playerId: id }),
 ]);
@@ -71,6 +78,9 @@ export const clientMessages = {
   micRelease: micSchema,
   vote: voteSchema,
   ready: readySchema,
+  triviaAnswer: triviaAnswerSchema,
+  previewPack: previewPackSchema,
+  uploadPack: uploadPackSchema,
   hostAction: hostActionSchema,
   setSpeaker: setSpeakerSchema,
   mediaConnected: mediaConnectedSchema,

@@ -141,3 +141,24 @@ section { background: var(--panel); border-radius: 16px; padding: 16px; display:
 .leaders .score { font-weight: 800; }
 .awards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; text-align: left; width: 100%; }
 .awards li { background: var(--panel); border-radius: 10px; padding: 8px 12px; }
+
+.pack-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.upload { display: flex; flex-direction: column; gap: 8px; }
+.upload label.link { cursor: pointer; }
+.pack-errors { background: var(--panel); border-radius: 10px; padding: 10px 12px; border-left: 4px solid var(--bad); }
+.pack-errors ul { margin: 6px 0; padding-left: 18px; }
+.pack-preview { background: var(--panel); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.pack-preview .sample-questions, .pack-preview ul { margin: 4px 0; padding-left: 18px; }
+.pack-preview li.right { color: var(--good); }
+.sample-words { margin: 0; color: var(--muted); }
+
+.trivia { display: flex; flex-direction: column; gap: 12px; align-items: stretch; text-align: center; }
+.trivia h2 { margin: 0; }
+.trivia .question { font-size: 1.3rem; font-weight: 700; margin: 0; }
+.choices { display: flex; flex-direction: column; gap: 8px; }
+.choice { display: flex; gap: 10px; align-items: center; text-align: left; background: var(--panel); border: 2px solid transparent; }
+.choice .letter { font-weight: 800; color: var(--primary); }
+.choice.picked { border-color: var(--accent); opacity: 1; }
+.choice.correct { border-color: var(--good); background: color-mix(in srgb, var(--good) 22%, var(--panel)); opacity: 1; }
+.choice.wrong { border-color: var(--bad); opacity: 1; }
+.choice.dim { opacity: 0.5; }

@@ -69,7 +69,7 @@ export class Sim {
   vote(id: string, vote: 'boo' | 'hurray', attemptId = this.attemptId) {
     return this.send({ type: 'vote', playerId: id, attemptId, vote });
   }
-  host(action: 'skipWord' | 'forceNext' | 'newGame' | 'kick', targetId?: string, by = 'ana') {
+  host(action: 'skipWord' | 'forceNext' | 'revealTrivia' | 'newGame' | 'kick', targetId?: string, by = 'ana') {
     return this.send({ type: 'hostAction', playerId: by, action, targetId });
   }
 }

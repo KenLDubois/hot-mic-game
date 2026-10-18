@@ -28,6 +28,7 @@ export function createGame(rules: Partial<Rules> = {}): GameState {
     playerOrder: [],
     households: [],
     words: [],
+    questions: [],
     wordIndex: 0,
     word: null,
     roundIndex: 0,
@@ -62,7 +63,9 @@ export function nextDeadline(s: GameState): number | null {
     else if (w.deadline !== null) times.push(w.deadline);
   }
   // Otherwise the intermission waits on players; only the minimum time is a deadline.
-  if (s.phase === 'intermission' && s.intermission && everyoneReady(s)) times.push(s.intermission.minUntil);
+  const im = s.phase === 'intermission' ? s.intermission : null;
+  if (im?.stage === 'reveal' && im.revealUntil !== null) times.push(im.revealUntil);
+  if (im?.stage === 'leaderboard' && im.minUntil !== null && everyoneReady(s)) times.push(im.minUntil);
   return times.length ? Math.min(...times) : null;
 }
 
@@ -94,6 +97,12 @@ function someoneCanGrab(s: GameState, w: WordState): boolean {
 function everyoneReady(s: GameState): boolean {
   const here = activePlayers(s).filter((p) => p.connected);
   return here.length > 0 && here.every((p) => s.intermission?.ready.includes(p.id));
+}
+
+function everyoneAnswered(s: GameState): boolean {
+  const here = activePlayers(s).filter((p) => p.connected);
+  const t = s.intermission?.trivia;
+  return !!t && here.length > 0 && here.every((p) => t.answers[p.id] !== undefined);
 }
 
 function activePlayers(s: GameState) {
@@ -180,8 +189,18 @@ function handle(s: GameState, e: GameEvent, now: number, fx: Effect[]) {
     }
     case 'ready': {
       const p = s.players[e.playerId];
-      if (s.phase !== 'intermission' || !s.intermission || !p || p.kicked) return;
+      if (s.phase !== 'intermission' || s.intermission?.stage !== 'leaderboard' || !p || p.kicked) return;
       if (!s.intermission.ready.includes(p.id)) s.intermission.ready.push(p.id);
+      return;
+    }
+    case 'triviaAnswer': {
+      const t = s.phase === 'intermission' && s.intermission?.stage === 'question' ? s.intermission.trivia : null;
+      const p = s.players[e.playerId];
+      if (!t || !p || p.kicked || t.id !== e.questionId) return;
+      // Answers lock as they are submitted.
+      if (t.answers[p.id] !== undefined) return;
+      if (!Number.isInteger(e.choice) || e.choice < 0 || e.choice >= t.choices.length) return;
+      t.answers[p.id] = e.choice;
       return;
     }
     case 'hostAction':
@@ -275,6 +294,8 @@ function onSetConfig(
     s.config.wordsPerRound = e.wordsPerRound;
   }
   if (e.packIds) s.config.packIds = [...e.packIds];
+  if (e.trivia !== undefined) s.config.trivia = e.trivia;
+  if (e.triviaPackIds) s.config.triviaPackIds = [...e.triviaPackIds];
 }
 
 function onStart(
@@ -298,7 +319,19 @@ function onStart(
       `The packs are ${total - e.words.length} words short for ${total} words`,
     );
   }
+  // One question for each intermission, and none after the last round.
+  const needed = s.config.trivia ? s.config.rounds - 1 : 0;
+  const questions = e.questions ?? [];
+  if (questions.length < needed) {
+    return reject(
+      fx,
+      e.playerId,
+      'not-enough-questions',
+      `The trivia packs are ${needed - questions.length} questions short for ${needed} questions`,
+    );
+  }
   s.words = e.words.slice(0, total);
+  s.questions = questions.slice(0, needed);
   s.wordIndex = 0;
   s.roundIndex = 0;
   s.intermission = null;
@@ -323,8 +356,18 @@ function onHostAction(
       endWord(s, w, now, 'skipped');
       return;
     }
+    case 'revealTrivia': {
+      if (s.phase === 'intermission' && s.intermission?.stage === 'question') revealTrivia(s, now);
+      return;
+    }
     case 'forceNext': {
-      if (s.phase === 'intermission') return startRound(s, now);
+      if (s.phase === 'intermission') {
+        const stage = s.intermission?.stage;
+        if (stage === 'question') revealTrivia(s, now);
+        else if (stage === 'reveal') startLeaderboard(s, now);
+        else startRound(s, now);
+        return;
+      }
       if (s.phase !== 'word' || !w) return;
       if (w.status === 'result' || w.status === 'steal' || w.status === 'done') w.deadline = now;
       return;
@@ -334,6 +377,7 @@ function onHostAction(
       s.phase = 'lobby';
       s.word = null;
       s.words = [];
+      s.questions = [];
       s.wordIndex = 0;
       s.roundIndex = 0;
       s.intermission = null;
@@ -358,6 +402,46 @@ function onHostAction(
 }
 
 // ----------------------------------------------------------- word machine
+
+/** The round just ended: the trivia question if there is one, otherwise straight to the leaderboard. */
+function startIntermission(s: GameState, at: number) {
+  s.phase = 'intermission';
+  s.word = null;
+  const q = s.config.trivia ? s.questions[s.roundIndex] : undefined;
+  s.intermission = { stage: 'leaderboard', trivia: null, revealUntil: null, minUntil: null, ready: [] };
+  if (q) {
+    s.intermission.stage = 'question';
+    s.intermission.trivia = {
+      id: `q${s.roundIndex + 1}`,
+      question: q.question,
+      choices: q.choices,
+      answer: q.answer,
+      source: q.source ?? null,
+      answers: {},
+    };
+  } else {
+    startLeaderboard(s, at);
+  }
+}
+
+/** Correct answers score, and the room sees what everyone picked. */
+function revealTrivia(s: GameState, at: number) {
+  const im = s.intermission!;
+  const t = im.trivia!;
+  for (const [id, choice] of Object.entries(t.answers)) {
+    const p = s.players[id];
+    if (p && choice === t.answer) p.score += s.rules.triviaPoints;
+  }
+  im.stage = 'reveal';
+  im.revealUntil = at + s.rules.triviaRevealMs;
+}
+
+function startLeaderboard(s: GameState, at: number) {
+  const im = s.intermission!;
+  im.stage = 'leaderboard';
+  im.revealUntil = null;
+  im.minUntil = at + s.rules.intermissionMinMs;
+}
 
 /** The next round's first word opens; the host's override and the ready-up both end up here. */
 function startRound(s: GameState, now: number) {
@@ -485,10 +569,22 @@ function advanceHost(s: GameState, now: number): boolean {
 }
 
 function advanceWord(s: GameState, now: number, fx: Effect[]): boolean {
-  if (s.phase === 'intermission' && s.intermission) {
-    if (!everyoneReady(s) || s.intermission.minUntil > now) return false;
-    startRound(s, now);
-    return true;
+  const im = s.phase === 'intermission' ? s.intermission : null;
+  if (im) {
+    switch (im.stage) {
+      case 'question':
+        if (!everyoneAnswered(s)) return false;
+        revealTrivia(s, now);
+        return true;
+      case 'reveal':
+        if (im.revealUntil! > now) return false;
+        startLeaderboard(s, im.revealUntil!);
+        return true;
+      case 'leaderboard':
+        if (!everyoneReady(s) || im.minUntil! > now) return false;
+        startRound(s, now);
+        return true;
+    }
   }
   const w = s.word;
   if (s.phase !== 'word' || !w) return false;
@@ -544,9 +640,7 @@ function advanceWord(s: GameState, now: number, fx: Effect[]): boolean {
       if (!due) return false;
       const at = w.deadline!;
       if (w.index + 1 < s.words.length && (w.index + 1) % s.config.wordsPerRound === 0) {
-        s.phase = 'intermission';
-        s.word = null;
-        s.intermission = { minUntil: at + s.rules.intermissionMinMs, ready: [] };
+        startIntermission(s, at);
         fx.push({ type: 'cue', name: 'round' });
       } else if (w.index + 1 < s.words.length) openWord(s, w.index + 1, at);
       else {

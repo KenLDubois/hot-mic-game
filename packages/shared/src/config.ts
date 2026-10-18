@@ -16,6 +16,10 @@ export interface Rules {
   resultHoldMs: number;
   /** Shortest intermission, so the leaderboard can be read even when everyone is ready at once. */
   intermissionMinMs: number;
+  /** How long the correct trivia answer is shown before the leaderboard. */
+  triviaRevealMs: number;
+  /** Points for a correct trivia answer. */
+  triviaPoints: number;
   /** How long a word's outcome is shown. Tune in playtesting. */
   doneHoldMs: number;
   /** How long the host can be away before host controls pass on. */
@@ -35,6 +39,8 @@ export const DEFAULT_RULES: Rules = {
   stealCountdownMs: 3_000,
   resultHoldMs: 6_000,
   intermissionMinMs: 20_000,
+  triviaRevealMs: 8_000,
+  triviaPoints: 1,
   doneHoldMs: 4_000,
   hostTransferMs: 30_000,
   songPoints: 2,
@@ -45,17 +51,24 @@ export const DEFAULT_RULES: Rules = {
 export interface GameConfig {
   rounds: number;
   wordsPerRound: number;
+  /** Word packs. */
   packIds: string[];
+  /** One music question for everyone between rounds. */
+  trivia: boolean;
+  triviaPackIds: string[];
 }
 
 export const DEFAULT_GAME_CONFIG: GameConfig = {
   rounds: 1,
   wordsPerRound: 5,
   packIds: ['starter'],
+  trivia: false,
+  triviaPackIds: ['music-trivia'],
 };
 
 export const LIMITS = {
   maxRounds: 10,
+  maxUploadedPacks: 10,
   maxWordsPerRound: 50,
   maxNameLength: 24,
   /** Safety guard for a public-facing server, not a design target (4 to 12). */

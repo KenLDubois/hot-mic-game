@@ -2,9 +2,18 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import type { Socket } from 'socket.io';
 import { createGame, nextDeadline, step, viewFor } from '@hot-mic/engine';
 import type { Effect, GameEvent, GameState } from '@hot-mic/engine';
-import { LIMITS, type DeviceView, type Rules, type ServerEvents, type View } from '@hot-mic/shared';
+import {
+  LIMITS,
+  checkPack,
+  previewPack,
+  type DeviceView,
+  type PackPreview,
+  type Rules,
+  type ServerEvents,
+  type View,
+} from '@hot-mic/shared';
 import type { DevicePermissions, MediaAdapter } from './media.js';
-import { availableWords, packInfo, type LoadedPack } from './packs.js';
+import { availableQuestions, availableWords, packInfo, type LoadedPack } from './packs.js';
 
 type GameSocket = Socket<Record<string, never>, ServerEvents>;
 
@@ -55,6 +64,9 @@ export class Room {
   /** The device each player last grabbed or pressed from: the one that sends their voice. */
   private micDevice = new Map<string, string>();
   private deviceSeq = 0;
+  /** Packs the host uploaded in this room's lobby. */
+  private uploaded: LoadedPack[] = [];
+  private uploadSeq = 0;
   private mediaQueue: Promise<void> = Promise.resolve();
   /** The connection details last sent to each device, to resend when its playRemote changes. */
   private mediaInfo = new Map<string, { url: string; token: string }>();
@@ -81,6 +93,37 @@ export class Room {
     this.broadcast();
     this.syncMedia();
     return result.effects;
+  }
+
+  /** Built-in packs plus whatever the host uploaded to this room. */
+  allPacks(): LoadedPack[] {
+    return [...this.deps.packs, ...this.uploaded];
+  }
+
+  /** Check a pack file, or one already here, and show what is in it. Nothing is added. */
+  previewPack(msg: { text: string } | { packId: string }): { ok: true; preview: PackPreview } | { ok: false; errors: string[] } {
+    if ('packId' in msg) {
+      const found = this.allPacks().find((p) => p.id === msg.packId);
+      return found ? { ok: true, preview: previewPack(found.pack) } : { ok: false, errors: ['That pack is not in this room'] };
+    }
+    const checked = checkPack(msg.text);
+    return checked.ok ? { ok: true, preview: previewPack(checked.pack) } : checked;
+  }
+
+  /** Adds a checked pack to this room and selects it for its kind. Returns what went wrong, if anything. */
+  uploadPack(hostId: string, text: string): { ok: true; id: string; preview: PackPreview } | { ok: false; errors: string[] } {
+    if (this.game.phase !== 'lobby') return { ok: false, errors: ['Packs can only be added in the lobby'] };
+    if (this.uploaded.length >= LIMITS.maxUploadedPacks) {
+      return { ok: false, errors: [`A room can have up to ${LIMITS.maxUploadedPacks} uploaded packs`] };
+    }
+    const checked = checkPack(text);
+    if (!checked.ok) return checked;
+    const id = `upload-${++this.uploadSeq}`;
+    this.uploaded.push({ id, pack: checked.pack, uploaded: true });
+    const c = this.game.config;
+    if (checked.pack.type === 'words') this.dispatch({ type: 'setConfig', playerId: hostId, packIds: [...c.packIds, id] });
+    else this.dispatch({ type: 'setConfig', playerId: hostId, triviaPackIds: [...c.triviaPackIds, id] });
+    return { ok: true, id, preview: previewPack(checked.pack) };
   }
 
   /** Add a brand-new player and return their token. */
@@ -350,7 +393,7 @@ export class Room {
     const view = viewFor(this.game, playerId, this.deps.now(), this.code);
     view.devices = this.deviceViews();
     if (this.game.phase === 'lobby') {
-      view.packs = packInfo(this.deps.packs);
+      view.packs = packInfo(this.allPacks());
       view.startBlocked = this.startBlocked();
     }
     return view;
@@ -362,8 +405,14 @@ export class Room {
     const present = Object.values(g.players).filter((p) => p.connected && !p.kicked).length;
     if (present < g.rules.minPlayers) return `Need at least ${g.rules.minPlayers} players`;
     const need = g.config.rounds * g.config.wordsPerRound;
-    const have = availableWords(this.deps.packs, g.config.packIds);
+    const have = availableWords(this.allPacks(), g.config.packIds);
     if (have < need) return `The chosen packs are ${need - have} words short for ${need} words`;
+    // One question for each intermission; there is none after the last round.
+    const questions = g.config.trivia ? g.config.rounds - 1 : 0;
+    const haveQuestions = availableQuestions(this.allPacks(), g.config.triviaPackIds);
+    if (haveQuestions < questions) {
+      return `The trivia packs are ${questions - haveQuestions} questions short for ${questions} questions`;
+    }
     return null;
   }
 

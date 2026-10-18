@@ -1,4 +1,4 @@
-import type { AwardView, PlayerView, View, WordView } from '@hot-mic/shared';
+import type { AwardView, IntermissionView, PlayerView, View, WordView } from '@hot-mic/shared';
 import { canGrab, eligibleVoters } from './engine.js';
 import type { GameState } from './state.js';
 
@@ -15,6 +15,30 @@ export function awards(s: GameState): AwardView[] {
     ...by('generous', (p) => p.stats.hurraysCast),
     ...by('stolen', (p) => p.stats.stolenFrom),
   ];
+}
+
+function intermissionView(s: GameState, playerId: string): IntermissionView | null {
+  const im = s.intermission;
+  if (!im) return null;
+  const t = im.trivia;
+  const revealed = im.stage !== 'question';
+  return {
+    stage: im.stage,
+    revealUntil: im.revealUntil,
+    minUntil: im.minUntil,
+    ready: im.ready,
+    trivia: t && {
+      id: t.id,
+      question: t.question,
+      choices: t.choices,
+      answered: Object.keys(t.answers),
+      eligible: s.playerOrder.filter((id) => s.players[id]!.connected && !s.players[id]!.kicked).length,
+      mine: t.answers[playerId] ?? null,
+      correct: revealed ? t.answer : null,
+      picks: revealed ? Object.entries(t.answers).map(([id, choice]) => ({ playerId: id, choice })) : null,
+      source: revealed ? t.source : null,
+    },
+  };
 }
 
 /**
@@ -73,6 +97,7 @@ export function viewFor(s: GameState, playerId: string, now: number, roomCode: s
       playerId,
       isHost: playerId === s.hostId,
       ready: !!s.intermission?.ready.includes(playerId),
+      answered: s.intermission?.trivia?.answers[playerId] !== undefined,
       vote: attempt?.votes[playerId] ?? null,
       canGrab: !!w && w.status === 'open' && canGrab(s, w, playerId),
     },
@@ -81,7 +106,7 @@ export function viewFor(s: GameState, playerId: string, now: number, roomCode: s
     wordInRound: w ? (w.index % s.config.wordsPerRound) + 1 : 0,
     wordNumber: w ? w.index + 1 : 0,
     totalWords: s.words.length,
-    intermission: s.intermission,
+    intermission: intermissionView(s, playerId),
     awards: s.phase === 'final' ? awards(s) : [],
     // The server fills these in; devices and media are not game rules.
     devices: [],
