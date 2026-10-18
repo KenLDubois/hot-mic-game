@@ -71,7 +71,7 @@ html.tv #root { height: 100%; }
 .tv-setup { grid-column: 1 / -1; text-align: center; font-size: 3rem; color: var(--muted); margin: 0; }
 
 .tv-final { display: flex; flex-direction: column; align-items: center; gap: 2.5rem; }
-.tv-final-board { list-style: none; margin: 0; padding: 0; width: 70%; display: flex; flex-direction: column; gap: 1rem; }
+.tv-final-board { list-style: none; margin: 0; padding: 0; width: 60%; display: flex; flex-direction: column; gap: 0.6rem; }
 .tv-final-board li { display: flex; gap: 2rem; background: var(--panel-2); border-radius: 1.2rem; padding: 1rem 2rem; font-size: 3.4rem; }
 .tv-final-board .rank { color: var(--muted); width: 3rem; }
 .tv-final-board .name { flex: 1; }
@@ -91,3 +91,18 @@ html.tv #root { height: 100%; }
 .tv-center { height: 100%; display: grid; place-items: center; font-size: 4rem; color: var(--muted); }
 .tv-banner { position: fixed; top: 0; left: 0; right: 0; background: var(--bad); color: #fff; text-align: center; padding: 0.6rem; font-size: 2rem; z-index: 10; }
 .tv-gate { position: fixed; inset: 0; background: rgba(20, 16, 31, 0.92); display: grid; place-items: center; z-index: 20; }
+
+.tv-inter { display: flex; flex-direction: column; align-items: center; gap: 2rem; }
+.tv-leaders { width: 85%; border-collapse: separate; border-spacing: 0 0.8rem; font-size: 3.2rem; }
+.tv-leaders th { font-size: 2rem; color: var(--muted); font-weight: 600; text-align: right; padding: 0 2rem; }
+.tv-leaders td { background: var(--panel-2); padding: 1rem 2rem; text-align: right; }
+.tv-leaders td.name { text-align: left; border-radius: 1.2rem 0 0 1.2rem; }
+.tv-leaders td:last-child { border-radius: 0 1.2rem 1.2rem 0; }
+.tv-leaders tr.away { opacity: 0.5; }
+.tv-leaders .score { font-weight: 800; }
+.tv-tick { display: inline-block; width: 3.4rem; color: var(--good); font-weight: 800; }
+.tv-awards { list-style: none; margin: 0; padding: 0; display: flex; gap: 2rem; width: 90%; }
+.tv-awards li { flex: 1; background: var(--panel-2); border-radius: 1.5rem; padding: 1.5rem 2rem; text-align: center; }
+.tv-award-title { font-size: 2rem; color: var(--primary); text-transform: uppercase; letter-spacing: 0.1em; }
+.tv-award-who { font-size: 3.4rem; font-weight: 800; margin: 0.4rem 0; }
+.tv-award-why { font-size: 2rem; color: var(--muted); }

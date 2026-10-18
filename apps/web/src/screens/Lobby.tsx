@@ -76,7 +76,23 @@ export function Lobby({ view }: { view: View }) {
         <section className="setup">
           <h2>Game setup</h2>
           <div className="stepper">
-            <span>Words</span>
+            <span>Rounds</span>
+            <button
+              disabled={view.config.rounds <= 1}
+              onClick={() => act(client.send('setConfig', { rounds: view.config.rounds - 1 }))}
+            >
+              −
+            </button>
+            <strong>{view.config.rounds}</strong>
+            <button
+              disabled={view.config.rounds >= LIMITS.maxRounds}
+              onClick={() => act(client.send('setConfig', { rounds: view.config.rounds + 1 }))}
+            >
+              +
+            </button>
+          </div>
+          <div className="stepper">
+            <span>Words per round</span>
             <button
               disabled={view.config.wordsPerRound <= 1}
               onClick={() => act(client.send('setConfig', { wordsPerRound: view.config.wordsPerRound - 1 }))}
@@ -112,7 +128,7 @@ export function Lobby({ view }: { view: View }) {
             Waiting for {view.players.find((p) => p.isHost)?.name ?? 'the host'} to start…
           </p>
           <p className="muted">
-            {view.config.wordsPerRound} words · {view.config.packIds.join(', ')}
+            {view.config.rounds} {view.config.rounds === 1 ? 'round' : 'rounds'} of {view.config.wordsPerRound} words · {view.config.packIds.join(', ')}
           </p>
         </section>
       )}

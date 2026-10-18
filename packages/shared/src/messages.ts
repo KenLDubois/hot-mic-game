@@ -34,6 +34,7 @@ export const joinScreenSchema = z.object({ roomCode, householdId: id, device: de
 export const roomInfoSchema = z.object({ roomCode });
 
 export const setConfigSchema = z.object({
+  rounds: z.number().int().min(1).max(LIMITS.maxRounds).optional(),
   wordsPerRound: z.number().int().min(1).max(LIMITS.maxWordsPerRound).optional(),
   packIds: z.array(id).min(1).max(20).optional(),
 });
@@ -69,6 +70,7 @@ export const clientMessages = {
   micPress: micSchema,
   micRelease: micSchema,
   vote: voteSchema,
+  ready: readySchema,
   hostAction: hostActionSchema,
   setSpeaker: setSpeakerSchema,
   mediaConnected: mediaConnectedSchema,

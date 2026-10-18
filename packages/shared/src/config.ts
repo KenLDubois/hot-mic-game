@@ -14,6 +14,8 @@ export interface Rules {
   stealCountdownMs: number;
   /** How long the vote result is shown. Tune in playtesting. */
   resultHoldMs: number;
+  /** Shortest intermission, so the leaderboard can be read even when everyone is ready at once. */
+  intermissionMinMs: number;
   /** How long a word's outcome is shown. Tune in playtesting. */
   doneHoldMs: number;
   /** How long the host can be away before host controls pass on. */
@@ -32,6 +34,7 @@ export const DEFAULT_RULES: Rules = {
   voteMs: 10_000,
   stealCountdownMs: 3_000,
   resultHoldMs: 6_000,
+  intermissionMinMs: 20_000,
   doneHoldMs: 4_000,
   hostTransferMs: 30_000,
   songPoints: 2,
@@ -40,7 +43,6 @@ export const DEFAULT_RULES: Rules = {
 
 /** What the host picks in the lobby. */
 export interface GameConfig {
-  /** Fixed at 1 until Milestone 4 adds intermissions. */
   rounds: number;
   wordsPerRound: number;
   packIds: string[];
@@ -53,6 +55,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = {
 };
 
 export const LIMITS = {
+  maxRounds: 10,
   maxWordsPerRound: 50,
   maxNameLength: 24,
   /** Safety guard for a public-facing server, not a design target (4 to 12). */
